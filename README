@@ -24,8 +24,8 @@ information.  I need to capture it now!
 I keep my physical photos for 30-40 years, and want to keep my digital
 photos for just as long.  If you believe that your current solution is
 going to survive that long, good for you.  I don't, and PIXTAG is my
-open way of saving the information in a way that will survive for
-30-40 years and survive all of the stupid vendor contests.  
+open way of saving the information in a way that will survive for many
+years and hopefully outlast the stupid vendor contests.
 
 That data belongs to you!  Don't let someone else lock it up!
 
@@ -58,7 +58,9 @@ to easily read and manage.
 The second is a naming convention for files.  You can use pixtag
 regardless of what you name your image files, but if you plan on
 keeping your pictures for decades, you better use something better
-than the IMG_1234 that comes out of your camera.
+than the IMG_1234 that comes out of your camera.  Plus, you better
+plan on mixing those files with ones from other people, scans of
+traditional prints, and so on.
 
 
 PIXTAG DESCRIPTION FILE
@@ -97,8 +99,14 @@ write tools.  A simple file is show below.
 The entire file is enclosed by the <pixtag></pixtag> pair of tags.
 Each individual photo is described by a <photo></photo> block.  Within
 the opening tag, the file="filename" tells us the name of the image
-file.  Within the photo block, a <desc></desc> pair of tags enclose
+file. Within the photo block, a <desc></desc> pair of tags enclose
 the text describing the photo.  That's all you need for a file.
+
+Since I am using the unique file names described below, I don't plan
+on putting any directory information in the file= tag.  I plan on just
+having the tools search through many directories for that unique file
+name.  That way, it doesn't matter if I move pictures around, group
+them into directories based on some sort of subject matter, etc.
 
 Since we might have many photos taken during a particular event, it
 would be nice to have some way to just describe that event once and
@@ -191,6 +199,16 @@ So here are some examples.
 			 a scan serial number prefixed with an "s" and
 			 followed by the three initials
 
+
+The jhead tool can do this renaming for you automatically based on
+EXIF timestamp information in digital camera files.  The command line
+invocation is as follows.  Windows uses % for shell variables so we
+need to double it (%%) to make them happy.
+
+ Windows --> jhead -n%%Y%%m%%d_%%H%%M%%S_dtl  file.jpg    
+ Unix    --> jhead -n%Y%m%d_%H%M%S_dtl  file.jpg    
+
+ jhead -ta+1:00 *.jpg    --> adds one hour to the exif timestamp
 
 In general, scanned photos should always have a date, but can then be
 named based on the time if known, or a serial number if not.  When the
