@@ -1,0 +1,245 @@
+==
+== PIXTAG Photo Description Tools
+==
+
+Digital photos are wonderful, but for all of their megapixels they
+lack the simple feature of prints -- you can't write on the back of
+them. 
+
+On the surface, it seems simple enough.  When I take a picture of
+Uncle Harvey, the JPEG file is one million bytes in size.  You would
+think that it wouldn't be difficult to add in the twelve extra bytes
+for the string "Uncle Harvey".
+
+The problem is that everyone wants to do it differently.  In what has
+become computing industry standard practice, each vendor wants to lock
+you into their private database for notes, and when the technology or
+business environment changes, you lose everything.
+
+In the past year, I have shot many photos, and since I can't jot notes
+on the back, have forgotten many details about the subjects.  I can't
+wait another few years for a winner to emerge before recording this
+information.  I need to capture it now!
+
+I keep my physical photos for 30-40 years, and want to keep my digital
+photos for just as long.  If you believe that your current solution is
+going to survive that long, good for you.  I don't, and PIXTAG is my
+open way of saving the information in a way that will survive for
+30-40 years and survive all of the stupid vendor contests.  
+
+That data belongs to you!  Don't let someone else lock it up!
+
+PIXTAG was written to scratch this particular itch.  The following are
+my design goals:
+
+   - Let me capture BASIC information about the photos 
+
+   - Store the master copy of the information in a separate file, 
+ 	so that we never lose it if some vendor decides to strip
+	things from the picture file.
+
+   - Store the master copy in an open format so that I can write 
+	tools against it or even just edit it with a text editor 
+	and never be held hostage to a particular tool.
+
+   - Copy the info into the file multiple times in all the competing
+	protocols, so that it will be visible in whatever system 
+	you happen to be using.
+
+In order to make this happen, I have defined two specs that will
+govern the tools I write.  If it other people and projects want to
+adopt them too, so much the better.
+
+The first is the pixtag file format for picture descriptions.  This is
+simple enough to write by hand with notepad.exe or emacs (I am doing a
+lot of this while building my tools), but structured enough for tools
+to easily read and manage.
+
+The second is a naming convention for files.  You can use pixtag
+regardless of what you name your image files, but if you plan on
+keeping your pictures for decades, you better use something better
+than the IMG_1234 that comes out of your camera.
+
+
+PIXTAG DESCRIPTION FILE
+
+There is some flexibility in how the master file is handled.  In most
+cases, I expect that there will be one file with all of the pictures a
+person has.  However, I can also see people partitioning the files by
+year, and perhaps super-aggressive users might even loading them into
+a mysql database. 
+
+I suggest the pixtag file extension for the master files.  So for a
+single file it might look like:
+
+	loffredo.pixtag
+
+For multiple years it might look like 
+
+	196x_loffredo.pixtag
+	197x_loffredo.pixtag
+	1980_loffredo.pixtag
+	1981_loffredo.pixtag
+
+The contents of the file is simple text, so it can be edited with a
+simple text editor like notepad or emacs, and processed with easy to
+write tools.  A simple file is show below.
+
+    <pixtag>
+
+    <photo file="20030801_163001.jpg" >
+      <desc>Uncle Harvey with a Monkey. The big party at Uncle
+        Harvey's House</desc>
+    </photo>
+
+    </pixtag>
+
+The entire file is enclosed by the <pixtag></pixtag> pair of tags.
+Each individual photo is described by a <photo></photo> block.  Within
+the opening tag, the file="filename" tells us the name of the image
+file.  Within the photo block, a <desc></desc> pair of tags enclose
+the text describing the photo.  That's all you need for a file.
+
+Since we might have many photos taken during a particular event, it
+would be nice to have some way to just describe that event once and
+then reference it, rather than repeating the same text in every one of
+the photos.  The <event></event> tag lets you do this if you want to:
+
+    <pixtag>
+
+    <event id="20030801_party" >
+      <desc>The big party at Uncle Harvey's House</desc>
+    </event>
+
+    <photo file="20030801_163001.jpg" >
+      <desc>Uncle Harvey with a Monkey</desc>
+      <event ref="20030801_party" />
+    </photo>
+
+    </pixtag>
+
+When you declare the <event>, the opening tag needs an id="eventname"
+that we will use to refer to it later.  I suggest using the date, and
+a short word or two separated by underscores.  Within the event block,
+we use the <desc></desc> tags, the same way we do in our photo blocks,
+for text describing the event.
+
+Finally, we indicate that a photo was taken at a particular event by
+putting in a reference tag of the form:
+
+	<event ref="eventname" />
+
+Note that the closing /> is a little different than we have seen
+before, but is important.  Photos can reference as many events as you
+would like.  Just add more <event ref="" /> tags to the photo block.
+
+Technically, all of this is well-formed XML, but I don't want to make
+a big deal about it, because a) the only people who care are software
+developers, and b) the first thing they would want to do is make the
+format more complex with various XML arcana.  
+
+Going forward, I will define some more optional tags when it comes
+time to store the EXIF camera settings from pictures, and of course, I
+fully suspect that some enterprising types will add their own tags for
+their personal applications.  That's fine, but for the base format, I
+refer back to the design goals -- keep it simple!
+
+
+
+IMAGE FILE NAMING CONVENTION --
+
+For my own uses, I am adopting the following convention for file
+names.  This should hold up for all of the digital photos taken by
+myself and others decades into the future as well as for any print
+photos from decades in the past scanned from many sources.
+
+The key element is to name the photos by time.  For digital camera
+photos, the exact time is available through the exif tag, so jhead or
+some other tool can be used to extract it and rename the file.  For
+scans where the exact time is not known, approximate dates, times, 
+or even seasons can be used, as well as a scan sequence number.
+
+To allow for photos from multiple people, each photo has a suffix with
+the initials or other identifing tag of the source.
+
+The general form is as follows:
+
+   [date]_[time-or-sequence]_[personal-id].jpg
+
+The DATE is written in year, month, day format, with some options for
+just narrowing it down to months, years, or seasons as below.  If you
+want to specify a range like "Sometime Sept 2-Oct 10, 1985" just do it
+in your description, and make the date "1985_fal" or "198509xx"
+
+The TIME-OR-SEQUENCE is written in hour, minute, second format with
+options to narrow it as below.  If it is one of many scanned photos
+from a particular event, you can use a scan sequence number instead
+of the form s00001, s00002, s00003, etc.
+
+The PERSONAL-ID should just be your initials or some other tag. For
+manageability, it is best to keep it around three letters.
+
+So here are some examples.
+
+20030124_242902_dtl.jpg -- From digital cameras, date followed by time
+			 in 24hour format, followed by three initials
+			 to identify the originator.   The time includes
+			 the seconds so we can have multiple photos
+			 per minute.
+
+20030124_s00001_dtl.jpg -- Scanned traditional photos, date followed by
+			 a scan serial number prefixed with an "s" and
+			 followed by the three initials
+
+
+In general, scanned photos should always have a date, but can then be
+named based on the time if known, or a serial number if not.  When the
+value is not known, "x" should be used to signal approximate values.
+
+20030124_09xxxx_dtl.jpg -- Picture with approximate time (~9am)
+200301xx_s00001_dtl.jpg -- Picture from sometime in january
+197x1225_s00001_dtl.jpg -- Picture from some christmas in the 70s
+
+The following convention can also be used to narrow things down to
+a season:
+
+2003_spr_s00001_dtl.jpg -- Scanned picture from sometime in spring
+
+	"_spr"		sometime in spring
+	"_sum"		sometime in summer
+	"_fal"		sometime in fall
+	"_win"		sometime in winter
+
+
+
+
+
+RANT ON OVER-ENGINEERING
+
+I say that Let me capture BASIC information about the photos avoid the
+over-engineered "solve the general problem first" mindset that seems
+to arise whenever someone starts talking about saving extra info with
+files.  Jotting "Uncle Harvey with Monkey" on a photo is not an
+interesting enough problem, so they inflate the scope to ANY KIND OF
+TEXT IN A PHOTO, then they say why just text? so it becomes ANY KIND
+OF STRUCTURED DATA IN A PHOTO, bit why just photos? so it becomes ANY
+KIND OF STRUCTURED DATA IN ANY KIND OF FILE.  Now there is a problem
+that you can build a career on!  Unfortunately, it will take years to
+solve and debug and deploy, and in the meantime, most of america has
+forgotten who that was in the photo.
+
+
+The cameras makers have a little user comment field
+
+use jhead to read/write xmp comments in the file
+
+process it into an index file that perl can grok
+
+use perl, superjpg and perhaps a MFC app to manage this database.
+
+
+
+
+The preclick lifetime organizer is XMP based and does a pretty good
+job of organizing the photos.
+

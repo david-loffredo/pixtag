@@ -1,0 +1,36 @@
+
+
+2003-09-04 - Realized that while PHIX amused me, a more descriptive
+name would probably be better. Registered the domains pixtag.com and
+picstag.com (the latter for misspellings based on word-of-mouth)
+
+2003-09-03 - Based on some XML discusions with Joe Fritz, made a few
+changes to the master file format to make it well formed XML.  Also
+based on experience scanning many pictures from the same event,
+decided to add the <event> capability.
+
+2003-08-30 - After a long time of contemplation and research on photo
+metadata, began work on a photo indexing tools, to be called PHIX for
+Photo Index (in the spirit of the STIX STEP Index tools).  Wrote down
+my rant against the existing overengineered and incompatible
+solutions, developed the initial design points, speced out the file
+naming convention, speced out a simple form for the master file, and
+began writing a perl script to handle the major operations.
+
+Prior year - Dave shoots many pictures with his digital camera.  Wants
+the ability to jot a note on the photo, but annoyed at the inability
+of vendors to agree on a standard way to do this.  Also wary of
+proprietary solutions since the photos hopefully will be around for
+many years.
+
+2002-11-26 - Asked SuperJPG guy to put annotations in EXIF.  Was
+rebuffed because he wanted to keep things in his own (closed)
+annotation file so that he could support other formats.
+
+January 2003, upgrade to new machine running Windows XP, with the
+bundled picture viewer essentially spelling the doom of any other
+viewer.  The Windows viewer uses the NTFS properties to support notes.
+
+2003-08-06 - Upgrade from photoshop 3.0, which strips EXIF data, to
+photoshop 7.0, which displays EXIF as read only, and only allows notes
+as byzantine XMP structures in the JPEG comment block.

@@ -1,0 +1,379 @@
+IPropertyStorage-Compound File Implementation
+IPropertyStorage-NTFS Implementation
+Structured Storage Files
+
+
+
+win32 - create/access file properties on NTFS 
+
+David Bolen db3l@fitlinxx.com 
+02 Nov 2001 18:00:15 -0500 
+
+     Previous message: win32 - create/access file properties on NTFS 
+     Next message: win32 - create/access file properties on NTFS 
+     Messages sorted by: [ date ] [ thread ] [ subject ] [ author ] 
+
+
+
+datalim@email.com (Data) writes:
+
+> How do I create/access the extra information while
+> we right click a file on NTFS at the "Summary" tab?
+> 
+> I checked ActivePython documentation
+> but the win32file.CreateFile seems doesn't provide
+> such feature.
+
+Those are file resources, which you have to use separate APIs to
+create and/or change.  The win32api module wraps the appropriate
+functions (e.g., LoadLibrary, BeginUpdateResource, EnumResourceNames,
+FindResource, LoadResource, UpdateResource), with constants (e.g.,
+RT_VERSION) in the win32con module.
+
+MSDN has info (if you don't have a local copy it's available at
+http://msdn.microsoft.com - the resources page is at
+http://msdn.microsoft.com/library/en-us/winui/resource_0jsj.asp), as
+I'm sure other information sites around would.
+
+Also, Gordan McMillan's installer package
+(http://www.mcmillan-inc.com) has a VersionInfo module used to set
+versions on final executables that may prove useful as some working
+code.
+
+--
+-- David
+-- 
+/-----------------------------------------------------------------------\
+ \               David Bolen            \   E-mail: db3l@fitlinxx.com  /
+  |             FitLinxx, Inc.            \  Phone: (203) 708-5192    |
+ /  860 Canal Street, Stamford, CT  06902   \  Fax: (203) 316-5150     \
+\-----------------------------------------------------------------------/
+
+
+
+
+     Previous message: win32 - create/access file properties on NTFS 
+     Next message: win32 - create/access file properties on NTFS 
+     Messages sorted by: [ date ] [ thread ] [ subject ] [ author ] 
+
+win32 - create/access file properties on NTFS 
+
+David Bolen db3l@fitlinxx.com 
+02 Nov 2001 18:20:27 -0500 
+
+     Previous message: win32 - create/access file properties on NTFS 
+     Next message: eval() of a __name__ 
+     Messages sorted by: [ date ] [ thread ] [ subject ] [ author ] 
+
+
+
+datalim@email.com (Data) writes:
+
+> How do I create/access the extra information while
+> we right click a file on NTFS at the "Summary" tab?
+
+Just to follow up to my other post - I just realized that I think the
+"Summary" tag is application specific, so the odds are that the
+information is just stored in the file in an RCDATA (application
+defined raw data) resource.  So the prior functions I mentioned ought
+to let you detect the data in the file, but not necessarily decode the
+contents.  I'm not that familiar with how the shell decodes those
+resources - perhaps by using the owning application or something?
+
+If this is for office documents (e.g., Word, Excel) then I believe
+that information is considered "Properties" of the document, and
+access to them would be through some published COM interfaces
+(IPropertySetStorage and IPropertyStorage).  Or you can automate the
+office application itself.  Microsoft also has a downloadable add-on
+(dsofile.dll) that adds an automatable COM object layer above this.
+
+--
+-- David
+-- 
+/-----------------------------------------------------------------------\
+ \               David Bolen            \   E-mail: db3l@fitlinxx.com  /
+  |             FitLinxx, Inc.            \  Phone: (203) 708-5192    |
+ /  860 Canal Street, Stamford, CT  06902   \  Fax: (203) 316-5150     \
+\-----------------------------------------------------------------------/
+
+
+
+
+     Previous message: win32 - create/access file properties on NTFS 
+     Next message: eval() of a __name__ 
+     Messages sorted by: [ date ] [ thread ] [ subject ] [ author ] 
+
+
+
+
+
+HowToDoThings.com 
+                                                                                              
+    Where people come to learn new things    
+   
+ Navigation 
+                     
+  Browse articles
+ Articles 
+  Recent articles
+  Most popular articles
+  Top authors
+ Members 
+  Log in
+  Sign up
+  Membership F.A.Q.
+ About 
+  Terms & conditions
+  Privacy
+  Contact us 
+  
+                     
+
+                      Current section: All topics / Computers / Programming / Delphi
+
+                       Give Me the Details or File Summary Info
+                       Written by mr Serhiy Perevoznyk
+                       This article has been viewed 2177 times
+                                                              Entered on 25 April 2002
+                                                              Last modified on 25 April 2002
+                                                                
+                        How to read File Summary Information for non Office files
+                        On Windows 2000 you can right-click in Explorer to get the file properties on any file and
+                        can associate summary information to any type of files, including even text files.
+
+                        For Word or Excel documents (compound files) the summary information is a part of
+                        document itself.
+                        For other types of files the way of storing additional information are different. This feature
+                        are only available on volumes formatted with NTFS. The NTFS implementation stores
+                        property sets in alternate streams of an NTFS file. The alternate streams must be copied
+                        when the main file is copied. However, not all file systems support such streams. For
+                        example, if an NTFS file with property sets is copied to a FAT volume, only the data in the
+                        file is copied; the property set is lost.
+
+                        First thing you probably want do is to detect whether the current volume is NTFS:
+
+                        // IsNTFS() - Verifies whether the file's volume is NTFS
+                        function IsNTFS(AFileName : string) : boolean;
+                        var
+                         fso, drv : OleVariant;
+                        begin
+                         IsNTFS := False;
+                         fso := CreateOleObject('Scripting.FileSystemObject');
+                         drv := fso.GetDrive(fso.GetDriveName(AFileName));
+                          if drv.FileSystem = 'NTFS' then
+                           IsNTFS := True;
+                        end;
+
+                        But how to read these properties? Is it really nessesary to work with a streams?
+                        No, NTFS file system 5.0 provides an implementation of IPropertySetStorage interface for
+                        files on an NTFS volume when the files themselves are not compound files. To get a
+                        pointer to the NTFS implementation of IPropertySetStorage, we have to call the
+                        StgCreateStorageEx function:
+
+                        function StgOpenStorageEx (
+                          const pwcsName : POleStr; //Pointer to the path of the
+                                                     //file containing storage object
+                          grfMode : LongInt; //Specifies the access mode for the object
+                          stgfmt : DWORD; //Specifies the storage file format
+                          grfAttrs : DWORD; //Reserved; must be zero
+                          pStgOptions : Pointer; //Address of STGOPTIONS pointer
+                          reserved2 : Pointer; //Reserved; must be zero
+                          riid : PGUID; //Specifies the GUID of the interface pointer
+                          out stgOpen : //Address of an interface pointer
+                          IStorage ) : HResult; stdcall; external 'ole32.dll';
+
+
+                        All Microsoft Windows 2000 applications should use this new function,
+                        StgOpenStorageEx, instead of StgOpenStorage, to take advantage of the enhanced
+                        Windows 2000 Structured Storage features.
+
+                        The implementation of IPropertySetStorage on NTFS file system is similar with compound
+                        file implementation and available only on Windows 2000. Windows 95 and Windows NT
+                        4.0 and earlier versions cannot access this interface.
+                        However, you cannot obtain the NTFS implementation of IPropertySetStorage for a
+                        compound file. When opening a compound file with StgOpenStorage, specifying the
+                        STGFMT_FILE enumeration value results in an error.
+
+                        The next function dumps all properties of the specific file. By changing the STGFMT_FILE
+                        flag in the StgOpenStorageEx call to STGMT_ANY you can open a Structured Storage
+                        property set or an NTFS file system property set.
+
+                        function GetFileSummaryInfo(const FileName: WideString): String;
+
+                        const
+                         FmtID_SummaryInformation: TGUID = '{F29F85E0-4FF9-1068-AB91-08002B27B3D9}';
+                         FMTID_DocSummaryInformation : TGUID =
+                        '{D5CDD502-2E9C-101B-9397-08002B2CF9AE}';
+                         FMTID_UserDefinedProperties : TGUID =
+                        '{D5CDD505-2E9C-101B-9397-08002B2CF9AE}';
+                         IID_IPropertySetStorage : TGUID = '{0000013A-0000-0000-C000-000000000046}';
+
+                        const
+                         STGFMT_FILE = 3; //Indicates that the file must not be a compound file.
+                                          //This element is only valid when using the StgCreateStorageEx
+                                          //or StgOpenStorageEx functions to access the NTFS file system
+                                          //implementation of the IPropertySetStorage interface.
+                                          //Therefore, these functions return an error if the riid
+                                          //parameter does not specify the IPropertySetStorage interface,
+                                          //or if the specified file is not located on an NTFS file system volume.
+
+                         STGFMT_ANY = 4; //Indicates that the system will determine the file type and
+                                         //use the appropriate structured storage or property set
+                                         //implementation.
+                                         //This value cannot be used with the StgCreateStorageEx function.
+
+
+                        // Summary Information
+                          PID_TITLE = 2;
+                          PID_SUBJECT = 3;
+                          PID_AUTHOR = 4;
+                          PID_KEYWORDS = 5;
+                          PID_COMMENTS = 6;
+                          PID_TEMPLATE = 7;
+                          PID_LASTAUTHOR = 8;
+                          PID_REVNUMBER = 9;
+                          PID_EDITTIME = 10;
+                          PID_LASTPRINTED = 11;
+                          PID_CREATE_DTM = 12;
+                          PID_LASTSAVE_DTM = 13;
+                          PID_PAGECOUNT = 14;
+                          PID_WORDCOUNT = 15;
+                          PID_CHARCOUNT = 16;
+                          PID_THUMBNAIL = 17;
+                          PID_APPNAME = 18;
+                          PID_SECURITY = 19;
+
+                          // Document Summary Information
+                          PID_CATEGORY = 2;
+                          PID_PRESFORMAT = 3;
+                          PID_BYTECOUNT = 4;
+                          PID_LINECOUNT = 5;
+                          PID_PARCOUNT = 6;
+                          PID_SLIDECOUNT = 7;
+                          PID_NOTECOUNT = 8;
+                          PID_HIDDENCOUNT = 9;
+                          PID_MMCLIPCOUNT = 10;
+                          PID_SCALE = 11;
+                          PID_HEADINGPAIR = 12;
+                          PID_DOCPARTS = 13;
+                          PID_MANAGER = 14;
+                          PID_COMPANY = 15;
+                          PID_LINKSDIRTY = 16;
+                          PID_CHARCOUNT2 = 17;
+
+                        var
+                          I: Integer;
+                          PropSetStg: IPropertySetStorage;
+                          PropSpec: array of TPropSpec;
+                          PropStg: IPropertyStorage;
+                          PropVariant: array of TPropVariant;
+                          Rslt: HResult;
+                          S: String;
+                          Stg: IStorage;
+                          PropEnum: IEnumSTATPROPSTG;
+                          HR : HResult;
+                          PropStat: STATPROPSTG;
+                          k : integer;
+
+                        function PropertyPIDToCaption(const ePID: Cardinal): string;
+                        begin
+                          case ePID of
+                            PID_TITLE:
+                              Result := 'Title';
+                            PID_SUBJECT:
+                              Result := 'Subject';
+                            PID_AUTHOR:
+                              Result := 'Author';
+                            PID_KEYWORDS:
+                              Result := 'Keywords';
+                            PID_COMMENTS:
+                              Result := 'Comments';
+                            PID_TEMPLATE:
+                              Result := 'Template';
+                            PID_LASTAUTHOR:
+                              Result := 'Last Saved By';
+                            PID_REVNUMBER:
+                              Result := 'Revision Number';
+                            PID_EDITTIME:
+                              Result := 'Total Editing Time';
+                            PID_LASTPRINTED:
+                              Result := 'Last Printed';
+                            PID_CREATE_DTM:
+                              Result := 'Create Time/Date';
+                            PID_LASTSAVE_DTM:
+                              Result := 'Last Saved Time/Date';
+                            PID_PAGECOUNT:
+                              Result := 'Number of Pages';
+                            PID_WORDCOUNT:
+                              Result := 'Number of Words';
+                            PID_CHARCOUNT:
+                              Result := 'Number of Characters';
+                            PID_THUMBNAIL:
+                              Result := 'Thumbnail';
+                            PID_APPNAME:
+                              Result := 'Creating Application';
+                            PID_SECURITY:
+                              Result := 'Security';
+                            else
+                              Result := '$' + IntToHex(ePID, 8);
+                            end
+                        end;
+
+                        begin
+                          Result := '';
+                         try
+                          OleCheck(StgOpenStorageEx(PWideChar(FileName),
+                          STGM_READ or STGM_SHARE_DENY_WRITE,
+                          STGFMT_FILE,
+                          0, nil, nil, @IID_IPropertySetStorage, stg));
+
+                          PropSetStg := Stg as IPropertySetStorage;
+
+                          OleCheck(PropSetStg.Open(FmtID_SummaryInformation,
+                             STGM_READ or STGM_SHARE_EXCLUSIVE, PropStg));
+
+                          OleCheck(PropStg.Enum(PropEnum));
+                          I := 0;
+
+                          hr := PropEnum.Next(1, PropStat, nil);
+                           while hr = S_OK do
+                           begin
+                             inc(I);
+                             SetLength(PropSpec,I);
+                             PropSpec[i-1].ulKind := PRSPEC_PROPID;
+                             PropSpec[i-1].propid := PropStat.propid;
+                             hr := PropEnum.Next(1, PropStat, nil);
+                          end;
+
+                          SetLength(PropVariant,i);
+                          Rslt := PropStg.ReadMultiple(i, @PropSpec[0], @PropVariant[0]);
+
+                          if Rslt = S_FALSE then Exit;
+
+                          for k := 0 to i -1 do
+                           begin
+                             S := '';
+                             if PropVariant[k].vt = VT_LPSTR then
+                               if Assigned(PropVariant[k].pszVal) then
+                                S := PropVariant[k].pszVal;
+
+                             S := Format(PropertyPIDToCaption(PropSpec[k].Propid)+ ' %s',[s]);
+                            if S <> '' then Result := Result + S + #13;
+                          end;
+                          finally
+                          end;
+                        end;
+                        (C) Serhiy Perevoznyk
+                        http://users.chello.be/ws36637/
+                                    This site is a member of WebRing. To browse visit
+                                    ss.webring.com/navbar?f=l&y=mrpmorris&u=10005707 
+
+
+
+
+
+
+
+
+                                 © Copyright 2000 - 2003 HowToDoThings.com - all rights reserved. 
+

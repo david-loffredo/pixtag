@@ -1,0 +1,14 @@
+
+<pixtag>
+
+<event id="20030801_party" >
+  <desc>The big party at Uncle Harvey's House</desc>
+</event>
+
+<photo file="20030801_163001.jpg" >
+  <desc>Uncle Harvey with a Monkey</desc>
+  <event ref="20030801_party" />
+</photo>
+
+</pixtag>
+
