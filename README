@@ -203,10 +203,12 @@ So here are some examples.
 The jhead tool can do this renaming for you automatically based on
 EXIF timestamp information in digital camera files.  The command line
 invocation is as follows.  Windows uses % for shell variables so we
-need to double it (%%) to make them happy.
+need to double it (%%) on Win98 to make them happy.  For some reason
+WinXP command shells do not need it doubled, probably Win2k too, but 
+I have not tested that.
 
- Windows --> jhead -n%%Y%%m%%d_%%H%%M%%S_dtl  file.jpg    
- Unix    --> jhead -n%Y%m%d_%H%M%S_dtl  file.jpg    
+ Windows 98  --> jhead -n%%Y%%m%%d_%%H%%M%%S_dtl  file.jpg    
+ Unix, WinXP --> jhead -n%Y%m%d_%H%M%S_dtl  file.jpg    
 
  jhead -ta+1:00 *.jpg    --> adds one hour to the exif timestamp
 
