@@ -1,4 +1,27 @@
 
+2003-11-03 - Progress is slow but continuing.  I have run the pixtag
+description format and file naming convention through real-world tests
+while scanning 35mm photos and organizing new digital photos.  It has
+held up quite well, and I have spread the specs around to a few other
+folks who seem to have similar needs.
+
+I have been writing little tools as I need them.  The first one read
+the pixtag data and generated an HTML page with the descriptions and
+links to the photos.  I used that for putting a web page for a summer
+work picnic.
+
+The second tool generated an empty set of XML tags for a given set of
+file names, which made it easier for me to document a bunch of photos
+in one big go.
+
+I have been using EMACS to author the descriptions, but have been
+working on a simple Visual Basic tool to make it easier for other
+folks to write notes.  This is coming along, but not yet ready.
+
+I use jhead to batch rename digicam files from the EXIF timestamp.
+This can also adjust the timestamp, which is very handy when pulling
+together pictures from several non-synchronized cameras.
+
 
 2003-09-04 - Realized that while PHIX amused me, a more descriptive
 name would probably be better. Registered the domains pixtag.com and
