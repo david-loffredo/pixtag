@@ -1,0 +1,83 @@
+
+Tue Sep 02 2003 - Suggestion from Joe. wrap it with <phix></phix> so
+that it is well formed XML.  Also use a better timestamp when I get
+around to implementing that part.
+
+
+
+--------------------
+import
+
+Add new files to the database.
+
+# rename the files according to the exif data
+
+jhead -n "%Y%m%d_%H%M%D_dtl"
+
+# add 
+
+20030104_2232_dtl.jpg --> 20030104_223202_dtl.jpg
+20030104_2234_dtl.jpg --> 20030104_223454_dtl.jpg
+20030110_1026_dtl.jpg --> 20030110_102652_dtl.jpg
+20030110_1027_dtl.jpg --> 20030110_102710_dtl.jpg
+20030110_1027_dtl0.jpg --> 20030110_102746_dtl.jpg
+20030110_1028_dtl.jpg --> 20030110_102803_dtl.jpg
+20030112_1125_dtl.jpg --> 20030112_112532_dtl.jpg
+20030112_1125_dtl0.jpg --> 20030112_112540_dtl.jpg
+20030112_1125_dtl1.jpg --> 20030112_112549_dtl.jpg
+20030112_1125_dtl2.jpg --> 20030112_112557_dtl.jpg
+20030116_1026_dtl.jpg --> 20030116_102645_dtl.jpg
+20030116_1027_dtl.jpg --> 20030116_102715_dtl.jpg
+20030116_1027_dtl0.jpg --> 20030116_102736_dtl.jpg
+20030116_1028_dtl.jpg --> 20030116_102802_dtl.jpg
+20030116_1028_dtl0.jpg --> 20030116_102820_dtl.jpg
+20030116_1028_dtl1.jpg --> 20030116_102841_dtl.jpg
+
+
+Add entries for those in the master file.
+
+
+
+--------------------
+export
+
+Write out a pixtag file containing <photo> and <event> data for a
+given set of files.  
+
+
+
+
+--------------------
+rename
+
+
+--------------------
+push 
+
+Copy data from the master file into each picture file.
+
+ -all
+ -modified   - use the timestamp to only push newer ones
+ -i          - ask for each file
+ -f          - force
+
+
+
+--------------------
+pull 
+
+Extract data from the files and update the master database with it.
+We will need to match the timestamp so pushes dont do anything crazy
+
+ -all
+ -modified   - use the timestamp to only push newer ones
+ -i          - ask for each file
+ -f          - force
+
+
+--------------------
+find
+
+Query for matches on a particular field.  This could print out just
+filenames, could fire up a separate viewer with the results, or could
+even emit a web page to /temp and call a browser on the results.

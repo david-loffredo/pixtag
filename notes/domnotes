@@ -1,0 +1,130 @@
+
+Document.getElementsByTagName ""
+
+
+
+The getElementsByTagName method returns a NodeList of all descendant
+elements of the specified name. If you supply the three characters "*"
+as the argument to this method, it returns all descendant elements of
+whatever name.
+
+In the following example using the 'albums.xml' file the code creates
+a NodeList of all the 'artist' elements, and then iterates through it
+displaying the nodeValue of the firstChild of each (the text).
+
+XML:
+<Albums>
+   <Album ref="CD142" category="Folk">
+      <title>Boil The Breakfast Early</title>
+      <artist>The Chieftains</artist>
+   </Album>
+   <Album ref="CD720" category="Pop">
+      <title>Come On Over</title>
+      <artist>Shania Twain</artist>
+   </Album>
+   <Album ref="CD024" category="Country">
+      <title>Red Dirt Girl</title>
+      <artist>Emmylou Harris</artist>
+   </Album>
+</Albums>
+
+Code (VBScript):
+Set objXMLDoc = CreateObject("Microsoft.XMLDOM")
+objXMLDoc.async = False
+objXMLDoc.load("albums.xml")
+
+Set Root = objXMLDoc.documentElement
+Set NodeList = Root.getElementsByTagName("artist")
+For Each Elem In NodeList
+   document.write(Elem.firstChild.nodeValue & "<br>")
+Next
+
+Output:
+The Chieftains
+Shania Twain
+Emmylou Harris
+
+
+
+The getAttribute method returns a string containing the value of the specified attribute. If the named attribute does not have a specified or default value, this method returns null.
+
+The following example uses the 'states.xml' file. Firstly a NodeList is created of all the 'State' elements, and then the code iterates through them getting the value of the 'ref' attribute of each.
+
+XML:
+<States>
+   <State ref="FL" const="27">
+      <name>Florida</name>
+      <capital>Tallahassee</capital>
+   </State>
+   <State ref="IA" const="29">
+      <name>Iowa</name>
+      <capital>Des Moines</capital>
+   </State>
+</States>
+
+Code (JavaScript):
+xml_doc = new ActiveXObject("Microsoft.XMLDOM");
+xml_doc.async = false;
+xml_doc.load("states.xml");
+
+states = xml_doc.getElementsByTagName("State");
+n_states = states.length;
+for (i = 0; i < n_states; i++)
+{
+   state = states.item(i);
+   attr = state.getAttribute("ref");
+   document.write(attr + "<br>");
+}
+
+Output:
+FL
+IA
+
+
+MSDN Home > MSDN Library > XML Web Services > XML > MSXML 3.0 SDK >
+XSLT Reference
+Microsoft XML 3.0 - XSLT Reference	
+
+Patterns
+
+A pattern is a type of expression that returns a set of nodes based on
+a set of conditions for a node. Nodes that satisfy the conditions
+match the pattern. The syntax for patterns is a subset of the syntax
+for expressions. In particular, location paths that meet certain
+restrictions can be used as patterns. An expression that is also a
+pattern always evaluates to an object of type node-set. A node matches
+a pattern if the node is a member of the result of evaluating the
+pattern as an expression with respect to some possible context; the
+possible contexts are those whose context node is the node being
+matched or one of its ancestors.
+
+The following table lists examples of patterns.
+
+Pattern 	Matches
+Para 	any para element
+* 	any element
+chapter|appendix 	any chapter element and any appendix element
+olist/item 	any item element with an olist parent
+appendix//para 	any para element with an appendix ancestor element
+/ 	the root node
+text() 	any text node
+processing-instruction() 	any processing instruction
+node() 	any node other than an attribute node and the root node
+id("W11") 	the element with unique ID W11
+para[1] 	any para element that is the first para child element of its parent
+*[position()=1 and self::para] 	any para element that is the first child element of its parent
+para[last()=1] 	any para element that is the only para child element of its parent
+items/item[position()>1] 	any item element that has an items parent and that is not the first item child of its parent
+item[position() mod 2 = 1] 	any item element that is an odd-numbered item child of its parent
+div[@class="appendix"]//p 	any p element with a div ancestor element that has a class attribute with value appendix
+@class 	any class attribute (not any element that has a class attribute)
+@* 	any attribute
+
+See Also
+
+Location Paths
+
+© 1999-2003 Microsoft Corporation. All rights reserved.
+  Contact Us   |   E-Mail this Page   |   MSDN Flash Newsletter
+  © 2003 Microsoft Corporation. All rights reserved.     Terms of Use    Privacy Statement     Accessibility   
+

@@ -1,0 +1,52 @@
+Photoshop levels dialog is horribly inaccurate
+http://www.aim-dtp.net/aim/evaluation/gamma_error/main.htm
+
+Scan process -- Warm up for 20min, power cycle, force vuescan
+calibrate.
+
+Banding links
+http://www.photo.net/bboard/q-and-a-fetch-msg?msg_id=004Ccx
+http://www.photo.net/bboard/q-and-a-fetch-msg?msg_id=005IBp
+
+
+VueScan calibration differs from Minolta calibration. I don't know all
+differences, but my tests have shown that Minolta calibration doesn't
+move the CCD while calibrating where VueScan does. Also, Minolta
+procedure sets max black and white per CCD line separately. VueScan
+seems to do this in one go. When your lamp has become too old the
+Minolta calibration procedure will make a warning LED blink or give a
+warning onscreen. VueScan will accept much lower light emmitting from
+your lamp. I don't even know if it will ever decide for a lamp
+replacement.
+
+Anyway, the shortcuts only work with the Minolta software, not with
+VueScan. What you can do to force the scanner to do a recalibration is
+turn it off an immediately on again after the preheating period of 20
+minutes. The scanner will perform a Minolta calibration then, after
+which you can apply a VueScan one as well.
+
+
+epson perfection 3200 -- $400 considered better than m5900, vuescan supports
+microtek scanmaker 5900  ~120-150
+
+http://www.gdargaud.net/Photo/VPano.html
+Warping to make panoramas
+
+http://www.gdargaud.net/Photo/ScannerTest.html
+Vuescan Notes
+
+     What ? You don't use Vuescan ? Go download it from Ed's website now. 
+     When scanning negatives, sometimes I get extremely noisy backgrounds, the dark areas are redish with a lot of noise that looks more like film grain than
+     scanner noise. Using multipass does not make much difference, but setting the RGB exposure manually to a higher value seems to help, although it
+     increases the duration of the scan.. 
+     Increasing the RGB value (5 to 30) is also a good way to scan dark slides, like night pictures. Probably better to associate it with Multipass too. 
+     With negative films, the color balance / RGB whatever is automatically determined from the cropped area of the selection. In other words, if you select even
+     the white borders of the scan, then the color rendition of the final scan will be quite different than what you saw on the preview. To avoid this, select only the
+     useful area. 
+     When scanning Black & White negative, use the white point and black point parameters to perfect the contrast of the image. Their default values are
+     respectively 1 and 0. 
+     After the scan is over, use you favorite photo-editing software to remove the dust, fingerprints, hairs, and fluffs that are always present on slides. The
+     appropriate function is called 'clone brush' in most programs. To ensure superior results, after you think you've removed it all, negate your image and look
+     again... 
+     I have compiled the help file of VueScan into a more convenient .chm file (Windows only). Download it (133Kb) and use it instead, so you can search the
+     text. It correspond to Vuescan version 7.5.56. 

@@ -1,0 +1,111 @@
+Independent JPEG Group  http://www.ijg.org/
+
+
+
+http://johnst.org/sw/exiftags/
+exiftags
+exifcom -- hampered by the fact that it cannot extend the tag length.
+
+
+
+
+
+
+
+
+exiftags
+
+       
+
+    Description
+                                                                                                                  
+    The exiftags utility parses a specified JPEG file or, by default, its standard input, looking for a JPEG APP1 section containing Exif (Exchangeable Image File) image metadata.
+    The properties contained in these data are then printed to the standard output. Digital cameras typically add Exif data to the image files they produce, containing information
+    about the camera and digitized image.
+
+    The program supports a variety of cameras, and includes additional support for a portion of the maker notes for Canon, Casio, Fuji, Minolta, Nikon, Olympus, and Sanyo
+    cameras. Currently this program runs under Windows and Unix-like operating systems.
+
+    An included companion utility, exifcom, displays and writes the UserComment Exif tag that some cameras include in the image metadata they create. This program is useful for
+    recording caption or location information in the image file itself.
+
+    I wrote this package to support the photoweb script, available from my software page.
+
+    Distribution
+    The current version of exiftags is 0.98. It carries a BSD license. The following distributions are available: 
+
+         Source tarball: exiftags-0.98.tar.gz 
+         i386 RPM: exiftags-0.98-1.i386.rpm 
+         Source RPM: exiftags-0.98-1.src.rpm 
+         Debian packages 
+         Windows executables: exiftags.zip 
+
+    If you've got a package you'd like me to reference here, just let me know. 
+
+    Documentation
+    Most of what you need to know is detailed in the man pages included with the distribution: exiftags and exifcom. You may also find the README or CHANGES documents
+    useful.
+
+    Support
+    E-mail questions, comments, patches, etc. to Eric Johnston. This software comes with no warranty or guaranteed support.
+
+    Other Software
+    Following are software packages of which I am aware that use exiftags. If you'd like something added to this list, just let me know. 
+
+         AutoScrapbook, a script for generating and maintaining an online photo gallery. 
+         Galadmin, a Gallery Administrator. 
+
+    Sample Output
+    Following is a sample of the output from exiftags using the default options:
+
+    Camera-Specific Properties:
+
+    Equipment Make: Canon
+    Camera Model: Canon PowerShot S200
+    Maximum Lens Aperture: f/2.8
+    Sensing Method: One-Chip Color Area
+    Lens Size: 5.41 - 10.81 mm
+    Firmware Version: Firmware Version 1.00
+
+    Image-Specific Properties:
+
+    Image Orientation: Top, Left-Hand
+    Horizontal Resolution: 180 dpi
+    Vertical Resolution: 180 dpi
+    Image Created: 2002:08:26 12:53:39
+    Exposure Time: 1/200 sec
+    F-Number: f/2.8
+    Lens Aperture: f/2.8
+    Exposure Bias: 0 EV
+    Flash: Flash, Auto
+    Focal Length: 5.41 mm
+    Color Space Information: sRGB
+    Image Width: 1600
+    Image Height: 1200
+    Rendering: Normal
+    Exposure Mode: Auto
+    Scene Capture Type: Standard
+    Exposure Mode: Easy Shooting
+    Focus Type: Auto
+    Metering Mode: Evaluative
+    Sharpness: Normal
+    Saturation: Normal
+    Contrast: Normal
+    Shooting Mode: Manual
+    Image Size: Large
+    Focus Mode: Single
+    Drive Mode: Single
+    Flash Mode: Auto
+    Compression Setting: Superfine
+    Macro Mode: Normal
+    Sequence Number: 1
+    White Balance: Auto
+    Image Number: 100-0032
+
+    Following is a sample of the output from exifcom using the verbose (-v) option:
+
+    Supported Length: 256
+    Type: ASCII
+    Length: 34
+    Comment: Trip to Hong Kong, September 2002.
+
