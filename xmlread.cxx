@@ -66,8 +66,8 @@ struct PixScriptXMLReader {
 
 
     void error(const char * msg) {
-	printf("%s: line %d: %s\n",
-	       filename.ro(), XML_GetCurrentLineNumber(parser), msg
+	fprintf (stderr, "%s: line %d: %s\n",
+		 filename.ro(), XML_GetCurrentLineNumber(parser), msg
 	    );
     }
 

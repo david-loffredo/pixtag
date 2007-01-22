@@ -69,15 +69,15 @@ int pixscribe_report (
 	PixScribePhoto * p = (PixScribePhoto*) db->photos[i];
 	const char * fn = p-> filename.ro();
 	if (last_fn && !strcasecmp (fn, last_fn)) {
-	    printf ("%s: DUPLICATE\n", fn);
+	    fprintf (stderr, "%s: DUPLICATE\n", fn);
 	}
 	last_fn = fn;
 
 	if (p-> status == PIXSCRIBE_PHOTO_NEW) {
-	    printf ("%s: NEW\n", fn);
+	    fprintf (stderr, "%s: NEW\n", fn);
 	}
 	if (p-> status == PIXSCRIBE_PHOTO_MISSING) {
-	    printf ("%s: MISSING\n", fn);
+	    fprintf (stderr, "%s: MISSING\n", fn);
 	}
     }
     return 0;
