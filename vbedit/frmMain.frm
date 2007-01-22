@@ -1,22 +1,22 @@
 VERSION 5.00
 Object = "{F9043C88-F6F2-101A-A3C9-08002B2F49FB}#1.2#0"; "comdlg32.ocx"
-Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.0#0"; "mscomctl.ocx"
+Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.0#0"; "MSCOMCTL.OCX"
 Object = "{BDC217C8-ED16-11CD-956C-0000C04E4C0A}#1.1#0"; "TABCTL32.OCX"
 Begin VB.Form frmMain 
    BorderStyle     =   3  'Fixed Dialog
    Caption         =   "PixTag note editor"
-   ClientHeight    =   7065
+   ClientHeight    =   7275
    ClientLeft      =   150
    ClientTop       =   435
-   ClientWidth     =   8460
+   ClientWidth     =   11880
    LinkTopic       =   "Form1"
    MaxButton       =   0   'False
    MinButton       =   0   'False
    NegotiateMenus  =   0   'False
    OLEDropMode     =   1  'Manual
-   ScaleHeight     =   471
+   ScaleHeight     =   485
    ScaleMode       =   3  'Pixel
-   ScaleWidth      =   564
+   ScaleWidth      =   792
    ShowInTaskbar   =   0   'False
    StartUpPosition =   3  'Windows Default
    Begin VB.CommandButton Command2 
@@ -47,38 +47,38 @@ Begin VB.Form frmMain
       Height          =   270
       Left            =   0
       TabIndex        =   0
-      Top             =   6795
-      Width           =   8460
-      _ExtentX        =   14923
+      Top             =   7005
+      Width           =   11880
+      _ExtentX        =   20955
       _ExtentY        =   476
       _Version        =   393216
       BeginProperty Panels {8E3867A5-8586-11D1-B16A-00C0F0283628} 
          NumPanels       =   3
          BeginProperty Panel1 {8E3867AB-8586-11D1-B16A-00C0F0283628} 
             AutoSize        =   1
-            Object.Width           =   9737
+            Object.Width           =   15769
             Text            =   "Status"
             TextSave        =   "Status"
          EndProperty
          BeginProperty Panel2 {8E3867AB-8586-11D1-B16A-00C0F0283628} 
             Style           =   6
             AutoSize        =   2
-            TextSave        =   "13-Oct-03"
+            TextSave        =   "12/4/2006"
          EndProperty
          BeginProperty Panel3 {8E3867AB-8586-11D1-B16A-00C0F0283628} 
             Style           =   5
             AutoSize        =   2
-            TextSave        =   "23:51"
+            TextSave        =   "4:49 PM"
          EndProperty
       EndProperty
    End
    Begin TabDlg.SSTab tabs 
       Height          =   5895
-      Left            =   83
+      Left            =   90
       TabIndex        =   3
       Top             =   120
-      Width           =   8295
-      _ExtentX        =   14631
+      Width           =   11655
+      _ExtentX        =   20558
       _ExtentY        =   10398
       _Version        =   393216
       Tabs            =   5
@@ -90,13 +90,17 @@ Begin VB.Form frmMain
       Tab(0).ControlEnabled=   -1  'True
       Tab(0).Control(0)=   "PhotoFile"
       Tab(0).Control(0).Enabled=   0   'False
-      Tab(0).Control(1)=   "picker"
+      Tab(0).Control(1)=   "img"
       Tab(0).Control(1).Enabled=   0   'False
-      Tab(0).Control(2)=   "Frame1"
+      Tab(0).Control(2)=   "picker"
       Tab(0).Control(2).Enabled=   0   'False
-      Tab(0).Control(3)=   "EventFrame"
+      Tab(0).Control(3)=   "Frame1"
       Tab(0).Control(3).Enabled=   0   'False
-      Tab(0).ControlCount=   4
+      Tab(0).Control(4)=   "EventFrame"
+      Tab(0).Control(4).Enabled=   0   'False
+      Tab(0).Control(5)=   "File1"
+      Tab(0).Control(5).Enabled=   0   'False
+      Tab(0).ControlCount=   6
       TabCaption(1)   =   "Event"
       TabPicture(1)   =   "frmMain.frx":001C
       Tab(1).ControlEnabled=   0   'False
@@ -119,6 +123,13 @@ Begin VB.Form frmMain
       Tab(4).Control(1)=   "Label1"
       Tab(4).Control(2)=   "Label2"
       Tab(4).ControlCount=   3
+      Begin VB.FileListBox File1 
+         Height          =   2235
+         Left            =   2280
+         TabIndex        =   19
+         Top             =   360
+         Width           =   2895
+      End
       Begin VB.OptionButton Option3 
          Caption         =   "By Event"
          Height          =   375
@@ -189,7 +200,7 @@ Begin VB.Form frmMain
          Height          =   1455
          Left            =   2520
          TabIndex        =   6
-         Top             =   1200
+         Top             =   1320
          Width           =   5415
          Begin VB.TextBox PhotoDesc 
             Height          =   975
@@ -215,6 +226,13 @@ Begin VB.Form frmMain
          TabIndex        =   4
          Top             =   600
          Width           =   2295
+      End
+      Begin VB.Image img 
+         Height          =   4575
+         Left            =   8280
+         Stretch         =   -1  'True
+         Top             =   720
+         Width           =   3135
       End
       Begin VB.Label PhotoFile 
          Caption         =   "File:"
@@ -370,12 +388,16 @@ End Sub
 
 Private Sub Form_Load()
     LoadResStrings Me
-    Me.Left = GetSetting(App.title, "Settings", "MainLeft", 1000)
-    Me.Top = GetSetting(App.title, "Settings", "MainTop", 1000)
-    Me.Width = GetSetting(App.title, "Settings", "MainWidth", 6500)
-    Me.Height = GetSetting(App.title, "Settings", "MainHeight", 6500)
+    'Me.Left = GetSetting(App.title, "Settings", "MainLeft", 1000)
+    'Me.Top = GetSetting(App.title, "Settings", "MainTop", 1000)
+    'Me.Width = GetSetting(App.title, "Settings", "MainWidth", 6500)
+    'Me.Height = GetSetting(App.title, "Settings", "MainHeight", 6500)
     Me.PixtagFilename.Text = GetSetting(App.title, "Settings", _
         "DefaultPixtagFile", "select filename")
+        
+        img.Picture = LoadPicture("\dave\pictures\ISS006-E-30141.JPG")
+    File1.Pattern = "*.frm"
+ 
 End Sub
 
 

@@ -25,7 +25,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "pixtag.h"
+#include "pixscribe.h"
 
 static void usage (char * name)
 {
@@ -50,17 +50,12 @@ int main (int argc, char ** argv)
     while (arg = NEXT_ARG(i,argc,argv))
     {
 	/* command line options */
-	if (!strcmp (arg, "-units")) 
+	if (!strcmp (arg, "-refresh")) 
 	{	
-	    print_conversion_factors();
-	    exit (1);
+	    // read and refresh a pixtag file against the contents of
+	    // a given directory.
 	}
-	else 
-	{
-	    stepnc.load (arg);
 
-	    dump_report(&stepnc);
-	}
     }
     return 0;
 }
