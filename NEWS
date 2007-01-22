@@ -1,59 +1,85 @@
+==
+== PixScribe Photo Annotation Tools
+==
 
-2003-11-03 - Progress is slow but continuing.  I have run the pixtag
-description format and file naming convention through real-world tests
-while scanning 35mm photos and organizing new digital photos.  It has
-held up quite well, and I have spread the specs around to a few other
-folks who seem to have similar needs.
+Changes in release 0.1 (in progress)
 
-I have been writing little tools as I need them.  The first one read
-the pixtag data and generated an HTML page with the descriptions and
-links to the photos.  I used that for putting a web page for a summer
-work picnic.
+* 2007-01-22 - First version of a maintenance tool library based on
+  Expat parser.  Was previously using some perl scripts for creating
+  an empty description file for all pictures in a directory.  This was
+  fine for documenting accumulated digital pictures, but when scanning
+  accumulated film, pictures were being added to completed directories
+  and it was getting difficult to keep track.
 
-The second tool generated an empty set of XML tags for a given set of
-file names, which made it easier for me to document a bunch of photos
-in one big go.
+* 2006-12-16 - The pixtag domain has been snatched up by someone else.
+  Annoyed at himself, Dave registers the pixscribe.com domain instead.
 
-I have been using EMACS to author the descriptions, but have been
-working on a simple Visual Basic tool to make it easier for other
-folks to write notes.  This is coming along, but not yet ready.
+* 2006-12-01 - After acquiring forty years and 25 CDs of unlabeled
+  picture scans from his father, Dave develops a renewed interest in
+  labeling his own pictures and scanning his old ones.
 
-I use jhead to batch rename digicam files from the EXIF timestamp.
-This can also adjust the timestamp, which is very handy when pulling
-together pictures from several non-synchronized cameras.
+* 2006-09-04 - Dave lets the pixtag.com and picstag.com domains expire
+  since he has done nothing with them and is tired of paying the $30.
+
+* 2003-11-03 - Progress is slow but continuing.  I have run the pixtag
+  description format and file naming convention through real-world
+  tests while scanning 35mm photos and organizing new digital photos.
+  It has held up quite well, and I have spread the specs around to a
+  few other folks who seem to have similar needs.
+
+  I have been writing little tools as I need them.  The first one read
+  the pixtag data and generated an HTML page with the descriptions and
+  links to the photos.  I used that for putting a web page for a
+  summer work picnic.
+
+  The second tool generated an empty set of XML tags for a given set
+  of file names, which made it easier for me to document a bunch of
+  photos in one big go.
+
+  I have been using EMACS to author the descriptions, but have been
+  working on a simple Visual Basic tool to make it easier for other
+  folks to write notes.  This is coming along, but not yet ready.
+
+  I use jhead to batch rename digicam files from the EXIF timestamp.
+  This can also adjust the timestamp, which is very handy when pulling
+  together pictures from several non-synchronized cameras.
+
+* 2003-09-04 - Realized that while PHIX amused me, a more descriptive
+  name would probably be better. Registered the domains pixtag.com and
+  picstag.com (the latter for misspellings based on word-of-mouth)
+
+* 2003-09-03 - Based on some XML discusions with Joe Fritz, made a few
+  changes to the master file format to make it well formed XML.  Also
+  based on experience scanning many pictures from the same event,
+  decided to add the <event> capability.
+
+* 2003-08-30 - After a long time of contemplation and research on
+  photo metadata, began work on a photo indexing tools, to be called
+  PHIX for Photo Index (in the spirit of the STIX STEP Index tools).
+  Wrote down my rant against the existing overengineered and
+  incompatible solutions, developed the initial design points, speced
+  out the file naming convention, speced out a simple form for the
+  master file, and began writing a perl script to handle the major
+  operations.
+
+* 2003-08-06 - Upgrade from photoshop 3.0, which strips EXIF data, to
+  photoshop 7.0, which displays EXIF as read only, and only allows
+  notes as byzantine XMP structures in the JPEG comment block.
+
+* 2003-01 - Upgraded to new machine running Windows XP, with the
+  bundled picture viewer essentially spelling the doom of any other
+  viewer.  The Windows viewer uses the NTFS properties to support
+  notes.
+
+* 2002-11-26 - Asked SuperJPG guy to put annotations in EXIF.  Was
+  rebuffed because he wanted to keep things in his own (closed)
+  annotation file so that he could support other formats.
+
+* The origin -- Dave shoots many pictures with his digital camera.
+  Wants the ability to jot a note on the photo, but annoyed at the
+  inability of vendors to agree on a standard way to do this.  Also
+  wary of proprietary solutions since the photos hopefully will be
+  around for many years.
 
 
-2003-09-04 - Realized that while PHIX amused me, a more descriptive
-name would probably be better. Registered the domains pixtag.com and
-picstag.com (the latter for misspellings based on word-of-mouth)
 
-2003-09-03 - Based on some XML discusions with Joe Fritz, made a few
-changes to the master file format to make it well formed XML.  Also
-based on experience scanning many pictures from the same event,
-decided to add the <event> capability.
-
-2003-08-30 - After a long time of contemplation and research on photo
-metadata, began work on a photo indexing tools, to be called PHIX for
-Photo Index (in the spirit of the STIX STEP Index tools).  Wrote down
-my rant against the existing overengineered and incompatible
-solutions, developed the initial design points, speced out the file
-naming convention, speced out a simple form for the master file, and
-began writing a perl script to handle the major operations.
-
-Prior year - Dave shoots many pictures with his digital camera.  Wants
-the ability to jot a note on the photo, but annoyed at the inability
-of vendors to agree on a standard way to do this.  Also wary of
-proprietary solutions since the photos hopefully will be around for
-many years.
-
-2002-11-26 - Asked SuperJPG guy to put annotations in EXIF.  Was
-rebuffed because he wanted to keep things in his own (closed)
-annotation file so that he could support other formats.
-
-January 2003, upgrade to new machine running Windows XP, with the
-bundled picture viewer essentially spelling the doom of any other
-viewer.  The Windows viewer uses the NTFS properties to support notes.
-
-2003-08-06 - Upgrade from photoshop 3.0, which strips EXIF data, to
-photoshop 7.0, which displays EXIF as read only, and only allows notes
-as byzantine XMP structures in the JPEG comment block.
