@@ -1,10 +1,9 @@
 ==
-== PIXTAG Photo Description Tools
+== PixScribe Photo Description Tools
 ==
 
-Digital photos are wonderful, but for all of their megapixels they
-lack the simple feature of prints -- you can't write on the back of
-them. 
+Digital photos are wonderful, but lack the simple feature of prints --
+you can't write on the back of them.
 
 On the surface, it seems simple enough.  When I take a picture of
 Uncle Harvey, the JPEG file is one million bytes in size.  You would
@@ -14,25 +13,29 @@ for the string "Uncle Harvey".
 The problem is that everyone wants to do it differently.  In what has
 become computing industry standard practice, each vendor wants to lock
 you into their private database for notes, and when the technology or
-business environment changes, you lose everything.
+business environment changes, you lose everything.  The list of
+contenders is impressive: EXIF comments, RDF varieties, XMP, NTFS file
+properties, and internal databases maintained by each different photo
+organizer (Picassa, iPhoto, Paint Shop Pro, SuperJPG, etc.)
 
-In the past year, I have shot many photos, and since I can't jot notes
-on the back, have forgotten many details about the subjects.  I can't
-wait another few years for a winner to emerge before recording this
-information.  I need to capture it now!
+In the past years, I have shot many photos, and since I can't jot
+notes on the back, have forgotten many details about the subjects.  I
+can't wait another few years for a winner to emerge before recording
+this information.  I need to capture it now!
 
-I keep my physical photos for 30-40 years, and want to keep my digital
-photos for just as long.  If you believe that your current solution is
-going to survive that long, good for you.  I don't, and PIXTAG is my
-open way of saving the information in a way that will survive for many
-years and hopefully outlast the stupid vendor contests.
+I have physical photos that are 40+ years old, and plan to keep my
+digital photos for just as long.  If you believe that your current
+solution will survive that long, good for you.  I don't, and PixScribe
+is my open way of saving the information in a way that will survive
+for many years and hopefully outlast the stupid vendor contests.
 
 That data belongs to you!  Don't let someone else lock it up!
 
-PIXTAG was written to scratch this particular itch.  The following are
+PIXSCRIBE was written to scratch this particular itch.  The following are
 my design goals:
 
-   - Let me capture BASIC information about the photos 
+   - Let me capture a basic description of photos and the events that
+     they may be connected with.
 
    - Store the master copy of the information in a separate file, 
  	so that we never lose it if some vendor decides to strip
@@ -46,16 +49,15 @@ my design goals:
 	protocols, so that it will be visible in whatever system 
 	you happen to be using.
 
-In order to make this happen, I have defined two specs that will
-govern the tools I write.  If it other people and projects want to
-adopt them too, so much the better.
+In order to make this happen, I have defined two specs that govern the
+tools I write.  If others people and projects want to adopt them too,
+so much the better.
 
-The first is the pixtag file format for picture descriptions.  This is
-simple enough to write by hand with notepad.exe or emacs (I am doing a
-lot of this while building my tools), but structured enough for tools
-to easily read and manage.
+The first is the pixscribe file format for descriptions.  This is
+simple enough to write by hand with notepad.exe or emacs (I do a lot
+of this), but structured enough for tools to easily read and manage.
 
-The second is a naming convention for files.  You can use pixtag
+The second is a naming convention for files.  You can use pixscribe
 regardless of what you name your image files, but if you plan on
 keeping your pictures for decades, you better use something better
 than the IMG_1234 that comes out of your camera.  Plus, you better
@@ -63,7 +65,7 @@ plan on mixing those files with ones from other people, scans of
 traditional prints, and so on.
 
 
-PIXTAG DESCRIPTION FILE
+PIXSCRIBE DESCRIPTION FILE
 
 There is some flexibility in how the master file is handled.  In most
 cases, I expect that there will be one file with all of the pictures a
@@ -71,32 +73,32 @@ person has.  However, I can also see people partitioning the files by
 year, and perhaps super-aggressive users might even loading them into
 a mysql database. 
 
-I suggest the pixtag file extension for the master files.  So for a
+I suggest the pixscribe file extension for the master files.  So for a
 single file it might look like:
 
-	loffredo.pixtag
+	loffredo.pixscribe
 
 For multiple years it might look like 
 
-	196x_loffredo.pixtag
-	197x_loffredo.pixtag
-	1980_loffredo.pixtag
-	1981_loffredo.pixtag
+	196x_loffredo.pixscribe
+	197x_loffredo.pixscribe
+	1980_loffredo.pixscribe
+	1981_loffredo.pixscribe
 
 The contents of the file is simple text, so it can be edited with a
 simple text editor like notepad or emacs, and processed with easy to
 write tools.  A simple file is show below.
 
-    <pixtag>
+    <pixscribe>
 
     <photo file="20030801_163001.jpg" >
       <desc>Uncle Harvey with a Monkey. The big party at Uncle
         Harvey's House</desc>
     </photo>
 
-    </pixtag>
+    </pixscribe>
 
-The entire file is enclosed by the <pixtag></pixtag> pair of tags.
+The entire file is enclosed by the <pixscribe></pixscribe> pair of tags.
 Each individual photo is described by a <photo></photo> block.  Within
 the opening tag, the file="filename" tells us the name of the image
 file. Within the photo block, a <desc></desc> pair of tags enclose
@@ -113,7 +115,7 @@ would be nice to have some way to just describe that event once and
 then reference it, rather than repeating the same text in every one of
 the photos.  The <event></event> tag lets you do this if you want to:
 
-    <pixtag>
+    <pixscribe>
 
     <event id="20030801_party" >
       <desc>The big party at Uncle Harvey's House</desc>
@@ -124,7 +126,7 @@ the photos.  The <event></event> tag lets you do this if you want to:
       <event ref="20030801_party" />
     </photo>
 
-    </pixtag>
+    </pixscribe>
 
 When you declare the <event>, the opening tag needs an id="eventname"
 that we will use to refer to it later.  I suggest using the date, and
@@ -144,14 +146,16 @@ would like.  Just add more <event ref="" /> tags to the photo block.
 Technically, all of this is well-formed XML, but I don't want to make
 a big deal about it, because a) the only people who care are software
 developers, and b) the first thing they would want to do is make the
-format more complex with various XML arcana.  
+format more complex with various XML arcana.  The only place where you
+might notice is that ampersands "&" are special in XML, so if you have
+one in a description, you need to write it as "&amp;" or else tools
+will complain "not well-formed (invalid token)" when they see it.
 
 Going forward, I will define some more optional tags when it comes
 time to store the EXIF camera settings from pictures, and of course, I
 fully suspect that some enterprising types will add their own tags for
 their personal applications.  That's fine, but for the base format, I
 refer back to the design goals -- keep it simple!
-
 
 
 IMAGE FILE NAMING CONVENTION --
