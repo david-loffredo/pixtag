@@ -14,6 +14,10 @@
 
 #include <string.h>
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#endif
+
 class PixScribeVector {
 protected:
     void **	f_data;

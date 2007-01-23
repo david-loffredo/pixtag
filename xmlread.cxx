@@ -16,13 +16,9 @@
 #include "pixscribe.h"
 #include "pixstruct.h"
 
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#endif
-
 /* Element names */
 #define PIXTAG_ELEMENT 		"pixtag"
-#define PIXSCRIBE_ELEMENT 	"pixtag"
+#define PIXSCRIBE_ELEMENT 	"pixscribe"
 #define PHOTO_ELEMENT 		"photo"
 #define EVENT_ELEMENT 		"event"
 #define DESC_ELEMENT 		"desc"

@@ -14,9 +14,7 @@
 #include "pixscribe.h"
 #include "pixstruct.h"
 
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#endif
+static PixScribePhoto _default_photo;
 
 int pixscribe_event_cmp (const void* a, const void* b)
 {
@@ -82,3 +80,53 @@ int pixscribe_report (
     }
     return 0;
 }
+
+
+PixScribePhoto * pixscribe_default_photo()
+{
+    return &_default_photo;
+}
+
+
+char * pixscribe_get_photo_file (PixScribePhoto * p)
+{
+    return (p? p-> filename.ro(): 0);
+}
+
+void pixscribe_set_photo_file (PixScribePhoto * p, const char * s)
+{
+    if (p) p-> filename = s;
+}
+
+char * pixscribe_get_photo_desc (PixScribePhoto * p)
+{
+    return (p? p-> desc.ro(): 0);
+}
+
+void pixscribe_set_photo_desc (PixScribePhoto * p, const char * s)
+{
+    if (p) p-> desc = s;
+}
+
+
+
+char * pixscribe_get_event_id (PixScribeEvent * p)
+{
+    return (p? p-> id.ro(): 0);
+}
+
+void pixscribe_set_event_id (PixScribeEvent * p, const char * s)
+{
+    if (p) p-> id = s;
+}
+
+char * pixscribe_get_event_desc (PixScribeEvent * p)
+{
+    return (p? p-> desc.ro(): 0);
+}
+
+void pixscribe_set_event_desc (PixScribeEvent * p, const char * s)
+{
+    if (p) p-> desc = s;
+}
+

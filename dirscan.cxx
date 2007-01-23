@@ -14,10 +14,6 @@
 #include "pixscribe.h"
 #include "pixstruct.h"
 
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#endif
-
 // Determine current platform
 #ifdef _WIN32
 #define PIXSCRIBE_USE_WIN32
@@ -189,7 +185,6 @@ int pixscribe_update_from_directory (
     /* Mark everything as missing, then mark them as OK when seen. */
 
     unsigned i,sz;
-    PixScribeString default_desc ("FILLME");
 
     for (i=0,sz=db->photos.size(); i<sz; i++) {
 	PixScribePhoto * p = (PixScribePhoto*) db->photos[i];
@@ -228,9 +223,8 @@ int pixscribe_update_from_directory (
 	}
 	else {
 	    /* check whether it matches the image pattern */
-	    p = new PixScribePhoto;
+	    p = new PixScribePhoto(*pixscribe_default_photo());
 	    p-> filename = buf.cFileName;
-	    p-> desc = default_desc;
 	    p-> status = PIXSCRIBE_PHOTO_NEW;
 	    db-> photos.append (p);
 	}

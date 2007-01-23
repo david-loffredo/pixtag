@@ -15,10 +15,6 @@
 #include "pixscribe.h"
 #include "pixstruct.h"
 
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#endif
-
 // Keep static for the moment
 static int pixscribe_write_photo_xml (PixScribePhoto *, FILE * f = 0);
 static int pixscribe_write_event_xml (PixScribeEvent *, FILE * f = 0);
@@ -108,6 +104,10 @@ int pixscribe_write_photo_xml (
 
     if (!p) return 1;
     if (!file) file = stdout;
+
+    if (p-> status == PIXSCRIBE_PHOTO_MISSING) {
+	fputs ("<!-- MISSING PHOTO -->\n", file);
+    }
 
     fputs ("<photo file=\"", file);
     fputs_attval (p->filename, file);

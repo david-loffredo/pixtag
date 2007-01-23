@@ -22,6 +22,7 @@
 // execs.
 //
 static int cat_main (int argc, char ** argv);
+static int update_main (int argc, char ** argv);
 
 static const char * main_usage = 
 "Usage: %s <cmd> [options]\n"
@@ -31,6 +32,7 @@ static const char * main_usage =
 " following commands are available:\n"
 "\n"
 "  cat\t - concatenate pixscript files.\n"
+"  update - update pixscript file against current directory.\n"
 "\n"
 " For more information on any command, call it with the -help\n"
 " option, like \"pix cat -help\"\n"
@@ -51,15 +53,12 @@ int main (int argc, char ** argv)
     if (!cmd) usage (EXEC_NAME);
 
     /* command line options */
-    if (!strcmp (cmd, "cat")) {
-	return cat_main (argc-1, argv+1);
-    }
-    else {
-	fprintf (stderr, "%s: Unknown command %s\n", EXEC_NAME, cmd);
-	return 1;
-    }
+    if (!strcmp (cmd, "cat")) 		return cat_main (argc-1, argv+1);
+    if (!strcmp (cmd, "update")) 	return update_main (argc-1, argv+1);
+    if (!strcmp (cmd, "help")) 		usage (EXEC_NAME);
 
-    return 0;
+    fprintf (stderr, "%s: Unknown command %s\n", EXEC_NAME, cmd);
+    return 1;
 }
 
 
@@ -69,7 +68,7 @@ int main (int argc, char ** argv)
 // ======================================================================
 
 static const char * cat_usage = 
-"Usage: pix cat [options] <files>\n"
+"Usage: pix cat [options] <pixfiles> ...\n"
 "\n"
 " Read and concatenate pixscript files.  The tool will warn about\n"
 " XML problems and duplicate photo entries.  Options are:\n"
@@ -125,5 +124,89 @@ static int cat_main (int argc, char ** argv)
     pixscribe_release_db (db);
     return 0;
 }
+
+
+
+
+
+// ======================================================================
+// UPDATE SUBCOMMAND 
+// ======================================================================
+
+static const char * update_usage = 
+"Usage: pix update [options] <pixfile> [<dir>]\n"
+"\n"
+" Update a pixscript file against the contents of a directory.\n"
+" By default, the current directory is used, but a different dir\n"
+" may be specified on the command line.  Options are:\n"
+"\n"
+" -help\t\t - print this help message. \n"
+" -desc <msg>\t - Use <msg> as the description for new entries.\n"
+" -n\t\t - Print report of changes, but do not update file.\n"
+" -o <file>\t - Save the updated file as <file>.  By default the\n"
+" \t\t   results are saved to the same file.\n"
+"\n";
+
+static int update_main (int argc, char ** argv)
+{
+    int i=1;
+    char * arg;
+    char * outfile = 0;  // stdout by default
+    int scanonly = 0;
+    
+    /* must have at least one arg */
+    if (argc < 2) { 
+	fprintf (stderr, update_usage);
+	return (1);
+    }
+
+    /* get remaining keyword arguments */
+    while (arg = NEXT_ARG(i,argc,argv))
+    {
+	/* command line options */
+	if (!strcmp (arg, "-o")) 
+	{	
+	    outfile = NEXT_ARG(i,argc,argv);
+	}
+	else if (!strcmp (arg, "-h") ||
+		 !strcmp (arg, "-help")) 
+	{ 
+	    fprintf (stderr, update_usage);
+	    return (1);
+	}
+	if (!strcmp (arg, "-desc")) 
+	{	
+	    pixscribe_set_photo_desc (
+		pixscribe_default_photo(),
+		NEXT_ARG(i,argc,argv)
+		);
+	}
+	else if (!strcmp (arg, "-n"))
+	{ 
+	    scanonly = 1;
+	}
+	else break;
+    }
+
+    if (!arg) { 
+	// we could go look for one
+	fprintf (stderr, update_usage);
+	return (1);
+    }
+
+    if (!outfile) outfile = arg;
+
+    PixScribeDB * db = pixscribe_new_db();
+    pixscribe_read_xml(db, arg);
+    pixscribe_update_from_directory (db, NEXT_ARG(i,argc,argv));
+    pixscribe_report (db);
+
+    if (!scanonly)
+	pixscribe_write_xml (db, outfile);
+
+    pixscribe_release_db (db);
+    return 0;
+}
+
 
 

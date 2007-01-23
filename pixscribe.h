@@ -12,7 +12,7 @@
 #ifndef PIXSCRIBE_H
 #define PIXSCRIBE_H
 
-// or make this an int handle and keep the data internal?
+// make an int handle and keep the data internal?
 struct PixScribeDB;
 struct PixScribePhoto;
 struct PixScribeEvent;
@@ -44,6 +44,22 @@ int pixscribe_update_from_directory (
 int pixscribe_is_photo_file (
     const char * filename
     );
+
+/* default pattern used for new photos */
+PixScribePhoto * pixscribe_default_photo();
+
+char * pixscribe_get_photo_file (PixScribePhoto *);
+void   pixscribe_set_photo_file (PixScribePhoto *, const char *);
+
+char * pixscribe_get_photo_desc (PixScribePhoto *);
+void   pixscribe_set_photo_desc (PixScribePhoto *, const char *);
+
+
+char * pixscribe_get_event_id   (PixScribeEvent *);
+void   pixscribe_set_event_id   (PixScribeEvent *, const char *);
+
+char * pixscribe_get_event_desc (PixScribeEvent *);
+void   pixscribe_set_event_desc (PixScribeEvent *, const char *);
 
 #endif /* PIXSCRIBE_H */
 

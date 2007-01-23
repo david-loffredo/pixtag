@@ -25,6 +25,12 @@ struct PixScribePhoto {
     
     int status;
     PixScribePhoto() { status = PIXSCRIBE_PHOTO_OK; }
+    PixScribePhoto (const PixScribePhoto &other) :
+	filename(other.filename), 
+	desc(other.desc), 
+	events(other.events),
+	status(PIXSCRIBE_PHOTO_NEW)
+    {}
 };
 
 struct PixScribeEvent {
