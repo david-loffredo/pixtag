@@ -46,7 +46,9 @@ int pixscribe_is_photo_file (
     );
 
 /* default pattern used for new photos */
-PixScribePhoto * pixscribe_default_photo();
+PixScribePhoto * pixscribe_default_photo(
+    PixScribeDB * db
+    );
 
 char * pixscribe_get_photo_file (PixScribePhoto *);
 void   pixscribe_set_photo_file (PixScribePhoto *, const char *);
@@ -54,6 +56,22 @@ void   pixscribe_set_photo_file (PixScribePhoto *, const char *);
 char * pixscribe_get_photo_desc (PixScribePhoto *);
 void   pixscribe_set_photo_desc (PixScribePhoto *, const char *);
 
+void pixscribe_add_photo_event (
+    PixScribePhoto * p, 
+    PixScribeEvent * e
+    );
+
+
+
+PixScribeEvent * pixscribe_find_event (
+    PixScribeDB * db,
+    const char * id
+    );
+
+PixScribeEvent * pixscribe_make_event (
+    PixScribeDB * db,
+    const char * id
+    );
 
 char * pixscribe_get_event_id   (PixScribeEvent *);
 void   pixscribe_set_event_id   (PixScribeEvent *, const char *);

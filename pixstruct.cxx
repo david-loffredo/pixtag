@@ -14,8 +14,6 @@
 #include "pixscribe.h"
 #include "pixstruct.h"
 
-static PixScribePhoto _default_photo;
-
 int pixscribe_event_cmp (const void* a, const void* b)
 {
     /* compare events by id, but watch for null */
@@ -82,9 +80,12 @@ int pixscribe_report (
 }
 
 
-PixScribePhoto * pixscribe_default_photo()
+    
+PixScribePhoto * pixscribe_default_photo(
+    PixScribeDB * db
+    )
 {
-    return &_default_photo;
+    return &(db-> dflt_photo);
 }
 
 
@@ -109,6 +110,19 @@ void pixscribe_set_photo_desc (PixScribePhoto * p, const char * s)
 }
 
 
+void pixscribe_add_photo_event (
+    PixScribePhoto * p, 
+    PixScribeEvent * e
+    )
+{
+    if (p && e) {
+	// really should check for duplicates
+	p-> events.append (e);
+    }
+}
+
+
+
 
 char * pixscribe_get_event_id (PixScribeEvent * p)
 {
@@ -130,3 +144,30 @@ void pixscribe_set_event_desc (PixScribeEvent * p, const char * s)
     if (p) p-> desc = s;
 }
 
+
+
+
+PixScribeEvent * pixscribe_find_event (
+    PixScribeDB * db,
+    const char * id
+    ) 
+{
+    return (db? db-> find_event(id): 0);
+}
+
+
+PixScribeEvent * pixscribe_make_event (
+    PixScribeDB * db,
+    const char * id
+    ) 
+{
+    if (!db || !id || !*id) return 0;
+
+    PixScribeEvent * e = db-> find_event(id);
+    if (!e) {
+	e = new PixScribeEvent;
+	e-> id = id;
+	db-> events.append (e);
+    }
+    return e;
+}

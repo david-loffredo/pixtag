@@ -141,7 +141,8 @@ static const char * update_usage =
 " may be specified on the command line.  Options are:\n"
 "\n"
 " -help\t\t - print this help message. \n"
-" -desc <msg>\t - Use <msg> as the description for new entries.\n"
+" -desc <msg>\t - Use description <msg> for all new entries.\n"
+" -event <id>\t - Add an event <id> to all new entries.\n"
 " -n\t\t - Print report of changes, but do not update file.\n"
 " -o <file>\t - Save the updated file as <file>.  By default the\n"
 " \t\t   results are saved to the same file.\n"
@@ -152,6 +153,8 @@ static int update_main (int argc, char ** argv)
     int i=1;
     char * arg;
     char * outfile = 0;  // stdout by default
+    char * desc = 0;
+    char * event = 0;
     int scanonly = 0;
     
     /* must have at least one arg */
@@ -174,12 +177,13 @@ static int update_main (int argc, char ** argv)
 	    fprintf (stderr, update_usage);
 	    return (1);
 	}
-	if (!strcmp (arg, "-desc")) 
+	else if (!strcmp (arg, "-desc")) 
 	{	
-	    pixscribe_set_photo_desc (
-		pixscribe_default_photo(),
-		NEXT_ARG(i,argc,argv)
-		);
+	    desc = NEXT_ARG(i,argc,argv);
+	}
+	else if (!strcmp (arg, "-event")) 
+	{	
+	    event = NEXT_ARG(i,argc,argv);
 	}
 	else if (!strcmp (arg, "-n"))
 	{ 
@@ -196,8 +200,20 @@ static int update_main (int argc, char ** argv)
 
     if (!outfile) outfile = arg;
 
+
+
     PixScribeDB * db = pixscribe_new_db();
     pixscribe_read_xml(db, arg);
+
+    pixscribe_set_photo_desc (
+	pixscribe_default_photo(db), desc
+	);
+
+    pixscribe_add_photo_event (
+	pixscribe_default_photo(db), 
+	pixscribe_make_event(db, event)
+	);
+
     pixscribe_update_from_directory (db, NEXT_ARG(i,argc,argv));
     pixscribe_report (db);
 

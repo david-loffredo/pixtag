@@ -10,13 +10,14 @@ Uncle Harvey, the JPEG file is one million bytes in size.  You would
 think that it wouldn't be difficult to add in the twelve extra bytes
 for the string "Uncle Harvey".
 
-The problem is that everyone wants to do it differently.  In what has
-become computing industry standard practice, each vendor wants to lock
-you into their private database for notes, and when the technology or
-business environment changes, you lose everything.  The list of
-contenders is impressive: EXIF comments, RDF varieties, XMP, NTFS file
-properties, and internal databases maintained by each different photo
-organizer (Picassa, iPhoto, Paint Shop Pro, SuperJPG, etc.)
+The problem is that everyone wants to do it differently.  In a
+familiar computing industry story, each group wants to lock you into
+their private database for notes, and when the technology or business
+environment changes, you lose everything.  The list of contenders is
+impressive: EXIF comments, RDF varieties and Dublin Core, XMP and
+IPTC, NTFS file properties, the Library of Congress MODS, as well as
+the internal databases maintained by each different photo organizer
+(Picassa, iPhoto, Paint Shop Pro, SuperJPG, etc.)
 
 In the past years, I have shot many photos, and since I can't jot
 notes on the back, have forgotten many details about the subjects.  I

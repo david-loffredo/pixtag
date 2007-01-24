@@ -43,6 +43,8 @@ struct PixScribeDB {
     PixScribeVector	photos;
     PixScribeVector	events;
 
+    PixScribePhoto	dflt_photo;
+
     ~PixScribeDB() {
 	unsigned i,sz;
 	for (i=0,sz=photos.size(); i<sz; i++) 

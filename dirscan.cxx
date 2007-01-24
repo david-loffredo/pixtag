@@ -223,7 +223,7 @@ int pixscribe_update_from_directory (
 	}
 	else {
 	    /* check whether it matches the image pattern */
-	    p = new PixScribePhoto(*pixscribe_default_photo());
+	    p = new PixScribePhoto(db->dflt_photo);
 	    p-> filename = buf.cFileName;
 	    p-> status = PIXSCRIBE_PHOTO_NEW;
 	    db-> photos.append (p);
