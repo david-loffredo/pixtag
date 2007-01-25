@@ -1,21 +1,12 @@
 
-Rethink how we are doing this.  Instead of building a standalone
-app for all of the user interface crap, why not use the web browser
-as our interface.  If we do this, our architecture can be:
+If the photo is missing the end tag, you can go into 
+a recursive read that is difficult to detect.   Watch for this
+in the state machine.
 
- Build in web active-x component to traditional app.
- 	- How do we handle form input?  
-	- There is a MS IE HtmlWidget as well as a Mozilla one.
-	
- Use the straight browser and communicate with a server running
- locally.  
-	- Shows up as localhost:1234.
-	- Must be started as a separate step
-	- Requires an html server software plus all of the usual CGI.
-	- More difficult for novice users
-	- Trivial to deploy on a real website
+Before writing, move any existing file to a backup, just in case there
+are problems.
 
+Add jhead file renaming to the pix.exe app with our defaut format.
 
+Add the HTML generator to the pix.exe app, perhaps use a template.
 
-VB App for entering data
-C++/VB ap for renaming files.

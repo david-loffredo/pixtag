@@ -12,6 +12,8 @@
 #ifndef PIXSCRIBE_H
 #define PIXSCRIBE_H
 
+#define PIXSCRIBE_VERSION 	"v0.1 (build " __DATE__ ")"
+
 // make an int handle and keep the data internal?
 struct PixScribeDB;
 struct PixScribePhoto;
