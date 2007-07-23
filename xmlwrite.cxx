@@ -69,6 +69,15 @@ int pixscribe_write_xml (
 {
     unsigned i,sz;
 
+//     // need to rename existing file to a backup
+//     errno = 0;
+//     if ( ((::remove(to)) && (errno != ENOENT)) || 
+// 	 (rename (from,to)))
+//     {
+// 	ROSE.warning ("Unable to rename %s to %s", from, to);
+// 	return 1;
+//     }
+
     FILE * file = stdout;
     if (fn && *fn) 
 	file = fopen (fn, "w");

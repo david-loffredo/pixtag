@@ -83,19 +83,23 @@ void pixscribe_release_db (PixScribeDB * db)
 }
 
 
+
+/* pixscribe_read_xml() -- populate a DB with the contents of a file.
+ * Returns: 0 on success, 
+ * -1 on file nonexistant, 
+ * > 0 (expat code) on XML errors
+ */
 int pixscribe_read_xml (
     PixScribeDB * db, 
     const char * filename
     )
 {
+    int status = 0;
     PixScriptXMLReader reader;
-    if ( !db || !filename) return 1;
+    if ( !db || !filename) return -1;
 
     FILE * file = fopen (filename, "r");
-    if ( !file) {
-	return 1;  // could not read
-    }
-
+    if ( !file) return -1;  // could not read
 
     XML_Parser xp = XML_ParserCreateNS(NULL, '|');
     XML_SetUserData(xp, &reader);
@@ -114,6 +118,7 @@ int pixscribe_read_xml (
 	    XML_STATUS_OK) {
 	    
 	    reader.error (XML_ErrorString(XML_GetErrorCode(xp)));
+	    status = XML_GetErrorCode(xp);
 	    break;
 	}
     } while (bytes_read > 0);
@@ -121,7 +126,7 @@ int pixscribe_read_xml (
     XML_ParserFree(xp);    
     fclose (file);
 
-    return 0;
+    return status;
 }
 
 

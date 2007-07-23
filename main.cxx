@@ -203,7 +203,15 @@ static int update_main (int argc, char ** argv)
 
 
     PixScribeDB * db = pixscribe_new_db();
-    pixscribe_read_xml(db, arg);
+    if (pixscribe_read_xml(db, arg) > 0) 
+    {
+	// Returns 0 if ok and -1 if no file.  If > 0 then XML errors
+	// present.  Do not continue if errors in file since that does
+	// not give any chance to correct it.
+	fprintf (stderr, "%s: errors in file, update cancelled\n",
+		 (arg? arg: "<no file>"));
+	return 1;
+    }
 
     pixscribe_set_photo_desc (
 	pixscribe_default_photo(db), desc
@@ -217,8 +225,12 @@ static int update_main (int argc, char ** argv)
     pixscribe_update_from_directory (db, NEXT_ARG(i,argc,argv));
     pixscribe_report (db);
 
-    if (!scanonly)
+    if (!scanonly) {
+	fprintf (stderr, "%s: saving updated file\n", 
+		 (outfile? outfile: "<no file>"));
+
 	pixscribe_write_xml (db, outfile);
+    }
 
     pixscribe_release_db (db);
     return 0;
