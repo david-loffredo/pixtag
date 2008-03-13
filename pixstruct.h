@@ -3,7 +3,7 @@
  * Auth: David Loffredo (dave@dave.com)
  * 
  * PixScribe Photo Annotation Tools
- * Copyright (c) 2003-2007 by David Loffredo
+ * Copyright (c) 2003-2008 by David Loffredo
  * All Rights Reserved
  * 
  * Internal structures used by PixScribe 

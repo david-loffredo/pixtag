@@ -4,6 +4,8 @@
 
 Changes in release 0.1 (in progress)
 
+* Added update command for managing changing directories of files.
+
 * 2007-01-22 - First version of a maintenance tool library based on
   Expat parser.  Was previously using some perl scripts for creating
   an empty description file for all pictures in a directory.  This was

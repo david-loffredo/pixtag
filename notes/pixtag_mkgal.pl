@@ -3,7 +3,7 @@
 # $Revision$ $Date$
 # Auth: Dave Loffredo (loffredo@steptools.com)
 # 
-# Copyright (c) 2003 by Dave Loffredo 
+# Copyright (c) 2003-2008 by Dave Loffredo 
 # All Rights Reserved.
 # 
 # This file is part of the PIXTAG software package
