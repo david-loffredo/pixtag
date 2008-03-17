@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "pixscribe.h"
+#include "pixstruct.h"
 
 // use rather than argv[0] for clarity
 #define EXEC_NAME	"pix" 
@@ -23,6 +24,7 @@
 //
 static int cat_main (int argc, char ** argv);
 static int update_main (int argc, char ** argv);
+static int get_main (int argc, char ** argv);
 
 static const char * main_usage = 
 "Usage: %s <cmd> [options]\n"
@@ -33,6 +35,7 @@ static const char * main_usage =
 "\n"
 "  cat\t - concatenate pixscript files.\n"
 "  update - update pixscript file against current directory.\n"
+"  get - print image description.\n"
 "  mv - move image description to new name (does not move file).\n"
 "\n"
 " For more information on any command, call it with the -help\n"
@@ -56,6 +59,7 @@ int main (int argc, char ** argv)
     /* command line options */
     if (!strcmp (cmd, "cat")) 		return cat_main (argc-1, argv+1);
     if (!strcmp (cmd, "update")) 	return update_main (argc-1, argv+1);
+    if (!strcmp (cmd, "get")) 		return get_main (argc-1, argv+1);
     //if (!strcmp (cmd, "mv")) 		return mv_main (argc-1, argv+1);
     if (!strcmp (cmd, "help")) 		usage (EXEC_NAME);
 
@@ -262,8 +266,6 @@ static int mv_main (int argc, char ** argv)
     int i=1;
     char * arg;
     char * outfile = 0;  // stdout by default
-    char * desc = 0;
-    char * event = 0;
     int scanonly = 0;
     
     /* must have at least one arg */
@@ -286,14 +288,6 @@ static int mv_main (int argc, char ** argv)
 	    fprintf (stderr, update_usage);
 	    return (1);
 	}
-	else if (!strcmp (arg, "-desc")) 
-	{	
-	    desc = NEXT_ARG(i,argc,argv);
-	}
-	else if (!strcmp (arg, "-event")) 
-	{	
-	    event = NEXT_ARG(i,argc,argv);
-	}
 	else if (!strcmp (arg, "-n"))
 	{ 
 	    scanonly = 1;
@@ -301,6 +295,7 @@ static int mv_main (int argc, char ** argv)
 	else break;
     }
 
+    
     if (!arg) { 
 	// we could go look for one
 	fprintf (stderr, update_usage);
@@ -322,18 +317,6 @@ static int mv_main (int argc, char ** argv)
 	return 1;
     }
 
-    pixscribe_set_photo_desc (
-	pixscribe_default_photo(db), desc
-	);
-
-    pixscribe_add_photo_event (
-	pixscribe_default_photo(db), 
-	pixscribe_make_event(db, event)
-	);
-
-    pixscribe_update_from_directory (db, NEXT_ARG(i,argc,argv));
-    pixscribe_report (db);
-
     if (!scanonly) {
 	fprintf (stderr, "%s: saving updated file\n", 
 		 (outfile? outfile: "<no file>"));
@@ -347,4 +330,91 @@ static int mv_main (int argc, char ** argv)
 
 
 
+
+
+// ======================================================================
+// GET SUBCOMMAND 
+// ======================================================================
+
+static const char * get_usage = 
+"Usage: pix get [options] <pixfile> [<photo> ... ]\n"
+"\n"
+" Generate html from a pixscript file.\n"
+"\n"
+" -help\t\t - print this help message. \n"
+"\n";
+
+static int get_main (int argc, char ** argv)
+{
+    int i=1;
+    char * arg;
+    char * outfn = 0;
+    char * tagfn = 0;
+    char * photofn = 0; 
+    
+    /* must have at least one arg */
+    if (argc < 3) { 
+	fprintf (stderr, get_usage);
+	return (1);
+    }
+
+    /* get remaining keyword arguments */
+    while (arg = NEXT_ARG(i,argc,argv))
+    {
+	/* command line options */
+	if (!strcmp (arg, "-o")) 
+	{	
+	    outfn = NEXT_ARG(i,argc,argv);
+ 	}
+	else if (!strcmp (arg, "-h") ||
+ 		 !strcmp (arg, "-help")) 
+ 	{ 
+ 	    fprintf (stderr, get_usage);
+ 	    return (1);
+ 	}
+ 	else break;
+    }
+
+    if (!arg) { 
+	fprintf (stderr, "No tag file specified!\n\n");	  
+	fprintf (stderr, update_usage);	  
+	return (1);
+    }
+
+
+    PixScribeDB * db = pixscribe_new_db();
+    if (pixscribe_read_xml(db, arg) > 0) 
+    {
+	fprintf (stderr, "%s: warning: errors in tag file\n",
+		 (arg? arg: "<no file>"));
+    }
+
+    while (arg = NEXT_ARG(i,argc,argv)) {
+	PixScribePhoto * p = db-> find_photo (arg);
+	unsigned i,sz;
+
+	if (!p) {
+	    fprintf (stderr, "%s: photo description not found\n", arg);
+	    continue;
+	}
+	const char * msg = pixscribe_get_photo_desc (p);
+
+	if (msg) {
+	    fputs (msg, stdout);
+	    fputs ("\n", stdout);
+	}
+	for (i=0, sz=p->events.size(); i<sz; i++) {
+	    const char * msg = pixscribe_get_event_desc (
+		(PixScribeEvent*) p->events[i]
+		);
+	    if (msg) {
+		fputs ("\n", stdout);
+		fputs (msg, stdout);
+		fputs ("\n", stdout);
+	    }
+	}
+    }
+    pixscribe_release_db (db);
+    return 0;
+}
 
