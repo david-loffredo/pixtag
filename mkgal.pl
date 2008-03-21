@@ -22,7 +22,7 @@
 # Generate a gallery from an image list
 #
 
-$columns = 6;
+$columns = 7;
 $title = "International STEP-NC Testing in Sweden";
 $pixtag = "2008_sweden.pixtag";
 $link_home = '<a href="index.html">Demostration Home</a>';
@@ -64,6 +64,60 @@ STEP-T24-group.jpg
 20080312_191800_scania.jpg
 20080312_203918_scania.jpg
 20080312_203952_scania.jpg
+20080310_172806_social.jpg
+20080310_174138_social.jpg
+20080310_174718_social.jpg
+20080310_174746_social.jpg
+20080310_174911_social.jpg
+20080310_175054_social.jpg
+20080310_175145_social.jpg
+20080310_180013_social.jpg
+20080310_180232_social.jpg
+20080310_180301_social.jpg
+20080310_180314_social.jpg
+20080310_180350_social.jpg
+20080310_180413_social.jpg
+20080310_180429_social.jpg
+20080310_180537_social.jpg
+20080310_180956_social.jpg
+20080310_181250_social.jpg
+20080310_184403_social.jpg
+20080310_184443_social.jpg
+20080310_184511_social.jpg
+20080310_184525_social.jpg
+20080310_184550_social.jpg
+20080310_184628_social.jpg
+20080310_184904_social.jpg
+20080310_184923_social.jpg
+20080310_185101_social.jpg
+20080310_185110_social.jpg
+20080310_185117_social.jpg
+20080310_185136_social.jpg
+20080310_185526_social.jpg
+20080310_185534_social.jpg
+20080310_190555_social.jpg
+20080310_190611_social.jpg
+20080310_190627_social.jpg
+20080310_190640_social.jpg
+20080310_190702_social.jpg
+20080310_192125_social.jpg
+20080310_195449_social.jpg
+20080310_200231_social.jpg
+20080310_210705_social.jpg
+20080310_210723_social.jpg
+20080310_210738_social.jpg
+20080310_210757_social.jpg
+20080310_210815_social.jpg
+20080310_210830_social.jpg
+20080310_213218_social.jpg
+20080310_213254_social.jpg
+20080310_213317_social.jpg
+20080310_213458_social.jpg
+20080310_213518_social.jpg
+20080310_213538_social.jpg
+20080310_213557_social.jpg
+20080310_221635_social.jpg
+20080311_222355_social.jpg
 };
 
 sub main {
@@ -71,7 +125,7 @@ sub main {
     my $last;
 
     open (DST, "> table.html");
-    print DST expand ($html{header}, COLUMNS=> $Columns);
+    print DST expand ($html{header}, COLUMNS=> $columns);
 
     my $count = 1;
     foreach $img (@images) {
