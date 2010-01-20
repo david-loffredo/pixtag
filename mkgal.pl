@@ -19,105 +19,54 @@
 #
 # 		----------------------------------------
 #
-# Generate a gallery from an image list
+# Generate a gallery from an image list.  This expects three
+# directories of photos:
+#
+#    photo_orig  == untouched
+#    photo       == sized to 800x600
+#    thumb       == sized to 72x53
 #
 
 $columns = 7;
-$title = "International STEP-NC Testing in Sweden";
-$pixtag = "2008_sweden.pixtag";
+$title = "International STEP-NC Demonstration - Renton 2009";
+$event = "Renton 2009";
+$pixtag = "renton.pixtag";
 $link_home = '<a href="index.html">Demostration Home</a>';
 
 my @images = qw{
-STEP-T24-group.jpg
-20080311_124815_sandviken.jpg
-20080311_125039_sandviken.jpg
-20080311_125102_sandviken.jpg
-20080311_125110_sandviken.jpg
-20080311_125133_sandviken.jpg
-20080311_144132_sandviken.jpg
-20080311_152129_sandviken.jpg
-20080311_152138_sandviken.jpg
-20080311_152859_sandviken.jpg
-20080312_094218_scania.jpg
-20080312_094234_scania.jpg
-20080312_094240_scania.jpg
-20080312_110120_scania.jpg
-20080312_113807_scania.jpg
-20080312_113820_scania.jpg
-20080312_113830_scania.jpg
-20080312_114504_scania.jpg
-20080312_114623_scania.jpg
-20080312_114934_scania.jpg
-20080312_115042_scania.jpg
-20080312_115208_scania.jpg
-20080312_115350_scania.jpg
-20080312_115357_scania.jpg
-20080312_115410_scania.jpg
-20080312_120735_scania.jpg
-20080312_121545_scania.jpg
-20080312_151320_scania.jpg
-20080312_155541_scania.jpg
-20080312_160532_scania.jpg
-20080312_164302_scania.jpg
-20080312_182950_scania.jpg
-20080312_191749_scania.jpg
-20080312_191800_scania.jpg
-20080312_203918_scania.jpg
-20080312_203952_scania.jpg
-20080310_172806_social.jpg
-20080310_174138_social.jpg
-20080310_174718_social.jpg
-20080310_174746_social.jpg
-20080310_174911_social.jpg
-20080310_175054_social.jpg
-20080310_175145_social.jpg
-20080310_180013_social.jpg
-20080310_180232_social.jpg
-20080310_180301_social.jpg
-20080310_180314_social.jpg
-20080310_180350_social.jpg
-20080310_180413_social.jpg
-20080310_180429_social.jpg
-20080310_180537_social.jpg
-20080310_180956_social.jpg
-20080310_181250_social.jpg
-20080310_184403_social.jpg
-20080310_184443_social.jpg
-20080310_184511_social.jpg
-20080310_184525_social.jpg
-20080310_184550_social.jpg
-20080310_184628_social.jpg
-20080310_184904_social.jpg
-20080310_184923_social.jpg
-20080310_185101_social.jpg
-20080310_185110_social.jpg
-20080310_185117_social.jpg
-20080310_185136_social.jpg
-20080310_185526_social.jpg
-20080310_185534_social.jpg
-20080310_190555_social.jpg
-20080310_190611_social.jpg
-20080310_190627_social.jpg
-20080310_190640_social.jpg
-20080310_190702_social.jpg
-20080310_192125_social.jpg
-20080310_195449_social.jpg
-20080310_200231_social.jpg
-20080310_210705_social.jpg
-20080310_210723_social.jpg
-20080310_210738_social.jpg
-20080310_210757_social.jpg
-20080310_210815_social.jpg
-20080310_210830_social.jpg
-20080310_213218_social.jpg
-20080310_213254_social.jpg
-20080310_213317_social.jpg
-20080310_213458_social.jpg
-20080310_213518_social.jpg
-20080310_213538_social.jpg
-20080310_213557_social.jpg
-20080310_221635_social.jpg
-20080311_222355_social.jpg
+20090514_001831_T24.jpg
+20090515_155000_dy.jpg
+20090515_155001_dy.jpg
+20090515_155002_dy.jpg
+20090515_155003_dy.jpg
+20090515_155004_dy.jpg
+20090515_155005_dy.jpg
+20090515_155006_dy.jpg
+20090515_155007_dy.jpg
+20090515_155008_dy.jpg
+20090515_155009_dy.jpg
+20090515_155010_dy.jpg
+20090515_155011_dy.jpg
+20090515_155012_dy.jpg
+20090305_162545_sv.jpg
+20090306_095556_sv.jpg
+20090306_095714_sv.jpg
+20090306_100126_sv.jpg
+20090306_100144_sv.jpg
+20090507_105437_mh.jpg
+20090507_151616_mh.jpg
+20090508_064042_mh.jpg
+20090508_070558_mh.jpg
+20090508_081727_mh.jpg
+20090508_090000_mh.jpg
+20090511_125258_mh.jpg
+20090511_130503_mh.jpg
+20090511_130532_mh.jpg
+20090516_105431_djo.jpg
+20090516_132844_djo.jpg
+20090516_132859_djo.jpg
+20090516_132904_djo.jpg
+20090516_132914_djo.jpg
 };
 
 sub main {
@@ -168,6 +117,7 @@ sub main {
 	open (DETAIL, "> $files{$img}->{file}");
 	print DETAIL expand ($html{imghead},
 			     TITLE => $title, PIC => $img,
+			     EVENT => $event,
 			     LINK_PREV => $link_prev,
 			     LINK_HOME => $link_home,
 			     LINK_NEXT => $link_next);
@@ -224,7 +174,7 @@ TABLE.gallery TH {
 </head>
 <body>
 
-<table class=gallery align=center>
+<table class="gal-photo gallery" align=center>
 <tr><th colspan=%%COLUMNS%%>Photo Gallery</th></tr>
 PERL_EOF
 
@@ -244,32 +194,26 @@ $html{imghead}  = <<'PERL_EOF';
 </head>
 
 <body>
-<table class=sitehead><tr>
-<td class=sitelogo>
-<a href="/"><img src="/images/logo-site.gif" alt="STEP Tools, Inc."></a></td>
-<td class=sitesearch>
- <form name="search_form" method="get" action="/search">
- <input type="hidden" name="method" value="and">
- <input type="text" name="words" size="15">
- <input type="submit" name="Submit" value="search">
- </form>
+<table class=stban><tr>
+<td class=stlogo><a href=/><span class=stred>STEP</span> Tools, Inc.</a></td>
+<td class=stnav>
+<form name="search_form" method="get" action="/search">
+<a href="/">Home</a> 
+ | <a href="/products/">Products</a> 
+ | <a href="/support/">Support</a>
+ | <a href="/sc4/">SC4</a> 
+ | <a class=stnavlast href="/pressroom/contactus.html">Contact Us</a>
+<input type="hidden" name="method" value="and">
+<input type="text" name="words" size="15">
+<input type="submit" name="Submit" value="search">
+</form>
 </td></tr>
 </table>
-
-<div class=sitenavtop>
-<a href="/">Home</a>
- | <a href="/products/">Products</a>
- | <a href="/support/">Support</a>
- | <a href="/sc4/">SC4</a>
- | <a href="/pressroom/contactus.html">Contact Us</a>
- | <a href="/search.html">Search</a>
-</div>
-
-<div class=siteloc>
+<div class=stloc>
 <a href="/">Home</a> &gt;
 <a href="/library/">Library</a> &gt;
 <a href="/library/stepnc/">STEP-NC Standard</a> &gt;
-<a href="index.html">Sweden 2008</a> &gt;
+<a href="index.html">%%EVENT%%</a> &gt;
 Photos
 </div>
 
@@ -288,7 +232,7 @@ $html{imgtail}  = <<'PERL_EOF';
 </div>
 
 <div class="copyright">
-Copyright &copy; 2008 STEP Tools Incorporated. All Rights Reserved<br>
+Copyright &copy; 2009 STEP Tools Incorporated. All Rights Reserved<br>
 <a href="/copyright.html">Legal notices and trademark attributions.</a>
 </div>
 </body>
