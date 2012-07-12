@@ -28,64 +28,45 @@
 #
 
 $columns = 7;
-$title = "International STEP-NC Demonstration - NIST 2010";
-$event = "NIST 2010";
-$pixtag = "nist.pixtag";
+$title = "STEP-NC Machining Accuracy - Stockholm 2012";
+$event = "Stockholm 2012";
+$pixtag = "kth.pixtag";
 $link_home = '<a href="index.html">Demostration Home</a>';
 
 my @images = qw{
-20100616_114522_T24.jpg
-20100602_145520_do.jpg
-20100604_140313_do.jpg
-20100605_072256_do.jpg
-20100606_145502_do.jpg
-20100606_150002_do.jpg
-20100616_073612_jf.jpg
-20100616_080305_jf.jpg
-20100616_080430_jf.jpg
-20100616_080840_jf.jpg
-20100616_093501_jf.jpg
-20100616_094502_jf.jpg
-20100616_094638_jf.jpg
-20100616_094728_jf.jpg
-20100616_094753_jf.jpg
-20100616_095544_jf.jpg
-20100616_100228_jf.jpg
-20100616_100543_jf.jpg
-20100616_100759_jf.jpg
-20100616_104834_jf.jpg
-20100616_113314_jf.jpg
-20100616_113419_jf.jpg
-20100616_113426_jf.jpg
-20100616_113435_jf.jpg
-20100616_113627_jf.jpg
-20100616_113642_jf.jpg
-20100616_113658_jf.jpg
-20100616_113722_jf.jpg
-20100616_113750_jf.jpg
-20100616_113853_jf.jpg
-20100616_114159_jf.jpg
-20100616_131101_jf.jpg
-20100616_144547_jf.jpg
-20100616_153744_jf.jpg
-20100616_154731_jf.jpg
-20100616_194146_jf.jpg
-20100616_194157_jf.jpg
-20100616_194204_jf.jpg
-20100617_103655_jf.jpg
-20100617_104832_jf.jpg
-20100617_134005_jf.jpg
-20100617_134308_jf.jpg
-20100617_143703_jf.jpg
-20100617_143715_jf.jpg
-20100617_175313_jf.jpg
-20100617_175424_jf.jpg
-20100618_082416_jf.jpg
-20100618_084503_jf.jpg
-20100618_084523_jf.jpg
-20100618_095603_jf.jpg
-20100618_103157_jf.jpg
-20100618_103232_jf.jpg
+20120608_183428_mh.jpg
+20120613_175907_dtl.jpg
+20120613_180027_dtl.jpg
+20120613_180316_dtl.jpg
+20120613_180416_dtl.jpg
+20120613_180521_ias.jpg
+20120613_180900_dtl.jpg
+20120613_181549_sv.jpg
+20120613_181716_dtl.jpg
+20120613_183722_mh.jpg
+20120613_184602_mh.jpg
+20120613_184815_dtl.jpg
+20120613_191436_dtl.jpg
+20120613_192243_dtl.jpg
+20120613_193527_ias.jpg
+20120614_083204_dtl.jpg
+20120614_084920_dtl.jpg
+20120614_085059_dtl.jpg
+20120614_101120_dtl.jpg
+20120614_101218_dtl.jpg
+20120614_102759_dtl.jpg
+20120614_102826_dtl.jpg
+20120614_110612_dtl.jpg
+20120614_110628_dtl.jpg
+20120614_110756_dtl.jpg
+20120614_110818_dtl.jpg
+20120614_110943_dtl.jpg
+20120614_111125_dtl.jpg
+20120614_111129_dtl.jpg
+20120614_111555_dtl.jpg
+20120614_111605_dtl.jpg
+20120614_111623_dtl.jpg
+20120614_111706_dtl.jpg
 };
 
 sub main {
@@ -251,7 +232,7 @@ $html{imgtail}  = <<'PERL_EOF';
 </div>
 
 <div class="copyright">
-Copyright &copy; 2010 STEP Tools Incorporated. All Rights Reserved<br>
+Copyright &copy; 2012 STEP Tools Incorporated. All Rights Reserved<br>
 <a href="/copyright.html">Legal notices and trademark attributions.</a>
 </div>
 </body>
