@@ -14,6 +14,9 @@
 EXEC 	 	= pix.exe
 LIBRARY  	= pixscribe.lib
 
+INSTDIR		= $(HOME)/bats
+
+
 EXPAT_INCLUDE	= -Ic:/build_tools/expat2/include
 EXPAT_LIBS	= c:/build_tools/expat2/lib/libexpatMD.lib
 
@@ -31,6 +34,11 @@ OBJECTS = \
 #
 default: $(EXEC)
 library: $(LIBRARY)
+
+install-scripts:
+	$(CP) cvtvid.bat $(INSTDIR)
+	$(CP) cvtvid.pl $(INSTDIR)
+
 
 
 clean:

@@ -84,7 +84,9 @@ sub transcode_canon_mov {
     # The canon camera shoots with a pixel format of yuvj420p, which
     # has full 0-255 range per channel, so keep that rather than the
     # yuv420p which has a smaller range.  No need for -map_metadata 0
-    # because we are adding the tags afterwards.
+    # because we are adding the tags afterwards.  Compress with a CRF
+    # of 16 which is basically original quality.
+    
 
     my $cmd = "ffmpeg -hide_banner -loglevel warning -i $f -c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 -pix_fmt yuvj420p -movflags +faststart -c:a aac -b:a 160k $tmpfile";
     
@@ -96,12 +98,29 @@ sub transcode_canon_mov {
     my $ratio = 0;
     $ratio = $newsz / $origsz unless $origsz == 0;
 
+    if ($ratio > 0.95) {
+	# Certain high-motion video will not compress much and may
+	# even be larger.  If we get less than 5% saving, redo with
+	# compressed audio but the original video (no transcode)
+	#
+	$cmd = "ffmpeg -hide_banner -loglevel warning -i $f  -c:v copy -movflags +faststart -c:a aac -c:a aac -b:a 160k $tmpfile";
+
+	print sprintf(" ==> minimal savings (%d%%), keeping original video\n", (1 - $ratio) * 100);
+
+	unlink $tmpfile or die "Could not remove TEMP file";
+	system ($cmd) == 0 or die "Problems in FFMPEG, halting";
+
+	$newsz = (-s $tmpfile);
+	$ratio = $newsz / $origsz unless $origsz == 0;
+    }
+
     # Note that WriteInfo returns nonzero on success, zero on error
     $et->WriteInfo($tmpfile, $newfile) == 0 and 
 	die "PROBLEMS WRITING metadata to $newfile, halting\n";
 
-    print sprintf(" ==> $newfile [saved %d%%]\n", (1 - $ratio) * 100);
+    unlink $tmpfile or warn "Could not remove TEMP file";
 
+    print sprintf(" ==> $newfile [saved %d%%]\n", (1 - $ratio) * 100);
 
     # done, rename the original
     rename $f, "original_movies/$f" or die "Could not rename original";
