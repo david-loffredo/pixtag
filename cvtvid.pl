@@ -1,15 +1,9 @@
 #!/usr/local/bin/perl
 
 use Image::ExifTool qw(:Public);
+use File::Find;
 
 ## Usage: curepix -tag dtl *.mov
-
-## Convert .mov file to mp4 using ffmpeg.  Copy over the exif tags to
-## XML-exif ones, and add new things if needed.  Assume that mov files
-## are from the canon camera.
-
-## -tag [inits]   
-
 
 # check filename if mov, convert movie 
 # if mpg, convert mpeg2 and deinterlace
@@ -20,11 +14,59 @@ use Image::ExifTool qw(:Public);
 #[XMP]           Make                            : Canon
 #[XMP]           Camera Model Name               : Canon camera make
 
+# The MPEG-2 video came from a Canon FS100
+# The tape video came from a Sony Hi8 Handycam
+# Short AVIs came from a Canon PowerShot S200
+
 # this could be robust under renaming
 #[XMP]           Image Unique ID                 : c657795e9df2e3362ce15babbf0485
 #[XMP]           File Source                     : Digital Camera
 
-# my $cmd2 = "ffmpeg -hide_banner -loglevel warning -i $f  -c:v copy -movflags +faststart -map_metadata 0 -map_metadata:s:v 0:s:v -c:a aac -c:a aac -b:a 160k $newfile";
+my $origdir = 'd:/temp/BACKUP';
+my %origfiles;
+my %knowncams = (
+    hi8 => {
+	desc => 'Sony 8mm tape camcorder',
+	Make => 'Sony',
+	CameraModelName => 'Sony Hi8 Handycam'
+    },
+    fs100 => {
+	desc => 'Canon early digital camcorder',
+	Make => 'Canon',
+	CameraModelName => 'Canon FS100'
+    },
+    s200 => {
+	desc => 'Our original Canon digital camera',
+	Make => 'Canon',
+	CameraModelName => 'Canon PowerShot S200'
+    },
+    sd200 => {
+	desc => 'Rudy/Judy original Canon digital camera',
+	Make => 'Canon',
+	CameraModelName => 'Canon PowerShot SD200'
+    },
+    s400 => {
+	desc => 'Dads original Canon digital camera',
+	Make => 'Canon',
+	CameraModelName => 'Canon PowerShot S400'
+    },
+    dsc2100 => {
+	desc => 'Judy new sony camera',
+	Make => 'Sony',
+	CameraModelName => 'Sony DSC-S2100'
+    },
+
+    moto => {
+	desc => 'Kristas Motorola Phone',
+	Make => 'Motorola',
+	CameraModelName => 'Motorola Moto G XT1031'
+    },
+    c743 => {
+	desc => 'Dads Kodak Camera',
+	Make => 'Eastman Kodak Company',
+	CameraModelName => 'Kodak C743 Zoom Digital Camera'
+    },
+    );
 
 
 sub usage {
@@ -38,8 +80,12 @@ are from the canon camera.
 -help		Print this usage message
 -tag <inits>	Use inits when renaming the file
 -rename		Rename file using original date
-
-
+-fixtags	Set creation date, make, model on MP4s
+-setcam <type>	Set source camera tag if not set
+-forcecam <type> As above, but force tag 
+		hi8 = Sony Hi8 Handycam (tapes)
+		fs100 = Canon FS100 (MPEG-2)
+		s200 = Canon S200 (AVIs)
 PERL_EOF
 ;
     exit(0);
@@ -84,6 +130,14 @@ sub SetCreateDate {
 	$datesource = 'filename' if $createdate;
     }
 
+    if (not $createdate) {
+	# watch for manually created filenames.  Treat as noon
+	$createdate = "${1}-${2}-${3}T120000" if 
+	    $filename =~ /^(\d\d\d\d)(\d\d)(\d\d)_s\d+/;
+	
+	$datesource = 'filename' if $createdate;
+    }
+
     ## Fall back to the embedded metadata if needed
     ## format is iso 2017-02-19T16:55:55
     my $origdate = $et-> GetNewValue('XMP:DateTimeOriginal');
@@ -113,6 +167,63 @@ sub SetCreateDate {
     return ($createdate, $datesource);
 }
 
+sub SetMakeModel {
+    my ($et, $et_orig, $opts, $f) = @_;
+
+    my ($maketag, $modeltag);
+    if (exists $opts->{findorig}) {
+	my $base = $f;
+	my $cam;
+	$base =~ s/\.[^\.]+//;
+	$cam = $origfiles{$base}->{src} if exists $origfiles{$base};
+
+	$maketag = $knowncams{$cam}->{Make} if $cam;
+	$modeltag = $knowncams{$cam}->{CameraModelName} if $cam;
+    }
+
+    # Look for motorola video
+    if ((not defined $maketag) and 
+	($et_orig-> GetValue('CompressorName') eq 'MOTO'))
+    {
+	$maketag = $knowncams{moto}->{Make};
+	$modeltag = $knowncams{moto}->{CameraModelName};
+    }
+
+    if ((not defined $maketag) and 
+	($et_orig-> GetValue('Information') =~ /KODAK C743/))
+    {
+	$maketag = $knowncams{c743}->{Make};
+	$modeltag = $knowncams{c743}->{CameraModelName};
+    }
+
+    # Fall through defaults 
+    $maketag = $opts->{Make} if 
+	((not defined $maketag) and (exists $opts->{Make}));
+
+    $modeltag = $opts->{CameraModelName} if 
+	((not defined $modeltag) and (exists $opts->{CameraModelName}));
+
+    
+
+    my $numset = 0;
+    if (defined $maketag and 
+	($opts->{forcecam} or not $et-> GetNewValue('XMP-tiff:Make')))
+    {
+	print " ==> set Make = $maketag\n";
+	$et-> SetNewValue('XMP-tiff:Make',$maketag);
+	$numset++;
+    }
+    if (defined $modeltag and
+	($opts->{forcecam} or not $et-> GetNewValue('XMP-tiff:Model')))
+    {
+    	print " ==> set CameraModelName = $modeltag\n";
+	$et-> SetNewValue('XMP-tiff:Model',$modeltag);
+	$numset++;
+    }
+    return $numset;
+}
+
+
 
 sub fixtags_mp4 {
     my ($f, $opts) = @_;
@@ -140,7 +251,9 @@ sub fixtags_mp4 {
     $et->SetNewValuesFromFile($f);
     
     my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
-    if ($datesrc eq 'ContentCreateDate') {
+    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
+
+    if ($tagcount == 0 and $datesrc eq 'ContentCreateDate') {
 	print " ==> has ContentCreateDate, SKIPPING\n";
 	return;
     }
@@ -203,19 +316,28 @@ sub transcode_canon_mov {
 	$newfile = "${val}_$opts->{tag}.mp4";
     }
 
+    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
+
     -f $newfile && do {
 	warn "FILE ALREADY EXISTS: $newfile, skipping\n";
 	return;
     };
 
-    # The canon camera shoots with a pixel format of yuvj420p, which
-    # has full 0-255 range per channel, so keep that rather than the
-    # yuv420p which has a smaller range.  No need for -map_metadata 0
-    # because we are adding the tags afterwards.  Compress with a CRF
-    # of 16 which is basically original quality.
-    
+    # Use the same pixel format as the input data (+).  The canon
+    # camera shoots with a pixel format of yuvj420p, which has full
+    # 0-255 range per channel, so keep that rather than the yuv420p
+    # which has a smaller range.
+    #
+    # The + will work for the canon too, but explicitly specify to
+    # suppress a warning about the unusual format.
+    my $pixfmt = '+';
+    $pixfmt = 'yuvj420p' if 
+	$et-> GetNewValue('XMP-tiff:Model') =~ /PowerShot ELPH 110/;
 
-    my $cmd = "ffmpeg -hide_banner -loglevel warning -i $f -c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 -pix_fmt yuvj420p -movflags +faststart -c:a aac -b:a 160k -metadata date=$createdate $tmpfile";
+    # Compress with a CRF of 16 which is basically original quality.
+    # Always convert the audio to AAC.  No need for -map_metadata 0
+    # because we are adding the tags afterwards.
+    my $cmd = "ffmpeg -hide_banner -loglevel warning -i $f -c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 -pix_fmt $pixfmt -movflags +faststart -c:a aac -b:a 160k -metadata date=$createdate $tmpfile";
     
     print "Converting $f\n";
     system ($cmd) == 0 or die "Problems in FFMPEG, halting";
@@ -253,12 +375,33 @@ sub transcode_canon_mov {
     rename $f, "$origdir/$f" or die "Could not rename original";
 }
 
+sub scanorig {
+    # only look at real files
+    return if not -f;
+    return if /\.(jpg|bmp|mkv)$/;
+    return if $File::Find::name =~ /original_(createdate|movies)/;
+
+    my $base = $_;
+    $base =~ s/\.[^\.]+//;
+    $origfiles{$base} = { file=>$File::Find::name };
+    $origfiles{$base}->{src} = 's200' if /\.avi$/;
+    $origfiles{$base}->{src} = 's400' if /_jcl\.avi$/;
+    $origfiles{$base}->{src} = 'sd200' if /_rz\.avi$/;
+    $origfiles{$base}->{src} = 'fs100' if /\.mpg$/;
+    if (/_jz\.avi$/) {
+	$origfiles{$base}->{src} = 'sd200';
+	$origfiles{$base}->{src} = 'dsc2100' if /^2011/;
+    }
+    
+#    print "$base, src=$origfiles{$base}->{src}, $origfiles{$base}->{file}\n";
+}
 
 
 sub main {
     my %opts = (tag=>'dtl', rename=>0);
     my @files;
- 
+    my $fixtags = 0;
+
     while ($_[0]) {
         $_ = $_[0];
 
@@ -272,6 +415,41 @@ sub main {
             next;
         };
 
+	/^-fixtags$/ && do {
+            shift; $fixtags = 1;
+            next;
+        };
+	/^-(set|force)cam$/ && do {
+            shift; $fixtags = 1;
+	    $opts{forcecam} = 1 if $1 eq 'force';
+
+	    my $cam = shift;
+	    # look up shorthands
+	    if (exists $knowncams{$cam}) {
+		print "Setting camera to $knowncams{$cam}->{desc}\n";
+		$opts{Make} = $knowncams{$cam}->{Make};
+		$opts{CameraModelName} = $knowncams{$cam}->{CameraModelName};
+	    }
+	    else {
+		$opts{CameraModelName} = $cam;
+	    }
+            next;
+        };
+
+	/^-setmake$/ && do {
+            shift; $fixtags = 1;
+	    $opts{Make} = shift;
+	    $opts{setcam} = 1;
+            next;
+        };
+
+	/^-findorig$/ && do {
+	    # match original camera
+	    find(\&scanorig, $origdir);
+	    $opts{findorig} = 1;
+	    shift; next;
+	};
+
         /^-/ && die "$0: unknown option: $_ (use -help for usage)\n";
 
         push @files, $_;  # tack on as just a plain file
@@ -281,6 +459,7 @@ sub main {
     for $arg (@files) {
 	foreach (sort glob $arg) {
 	    /\.mov$/ && transcode_canon_mov($_, \%opts);
+	    /\.mp4$/ and $fixtags && fixtags_mp4($_, \%opts);
 	}
     }
     return 0;
