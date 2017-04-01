@@ -296,6 +296,41 @@ my %knowncams = (
 }
 
 
+
+sub RenameMediaFiles {
+    my ($dst, $tags) = @_;
+
+    # Move everything to a backup then to the final, so that we can
+    # handle overlapping names.
+    my $tagschanged;
+    foreach my $f (sort keys %{$dst}) {
+	my $bakfile = $dst->{$f}.'BAK';
+	next if $f eq $dst->{$f};
+
+	if (-f $bakfile) { 
+	    print "$bakfile ALREADY EXISTS!\n"; next; 
+	    delete $dst->{$f};  # strange do not try to move
+	}
+	rename $f, $bakfile;
+	$tagschanged = 1 if $tags->RenamePhoto($f,$bakfile);
+    }
+
+    foreach my $f (sort keys %{$dst}) {
+	my $bakfile = $dst->{$f}.'BAK';
+	next if $f eq $dst->{$f};
+
+	if (-f $dst->{$f}) {
+	    print "$dst->{$f} ALREADY EXISTS!\n"; next;
+	}
+	rename $bakfile, $dst->{$f};
+	$tagschanged = 1 if $tags->RenamePhoto($bakfile,$dst->{$f});
+    }
+    return $tagschanged;
+}
+
+
+
+
 # Exiftool refuses to set the quicktime tags used by Plex.  I suspect
 # that this is just an attempt to promote XMP rather than a technical
 # barrier.
@@ -311,6 +346,58 @@ my %knowncams = (
 
 # Figure out the creation date, set related new tags, and return the
 # creation date value as an ISO string along with the source.
+
+sub NormalizeDate {
+    my ($date) = @_;
+    $date =~ s/^(\d{4}):(\d\d):(\d\d) /${1}-${2}-${3}T/;
+    return $date;
+}
+
+sub GetCreateDate {
+    my ($et, $filename) = @_;
+    ## Find creation date from embedded metadata, may need to look in
+    ## several places
+    ## format is iso 2017-02-19T16:55:55
+    my $date = $et-> GetValue('DateTimeOriginal');
+    return (NormalizeDate($date), 'DateTimeOriginal') if $date;
+
+    $date = $et-> GetValue('ContentCreateDate', 'Raw');
+    return (NormalizeDate($date), 'ContentCreateDate') if $date;
+
+    # We could also look at 'QuickTime:CreateDate' and ModifyDate but
+    # these are done in UTC when coming off of Kristas camera so we
+    # just bag it and use the VID_2017... filename encoded date.
+
+    # Use the filename first because we might have manually set it
+    # from the AVI file date or some other source.  Note that the
+    # files coming from Krista's phone encode the start time for the
+    # video rather than the end date.
+
+    $date = "${1}-${2}-${3}T${4}:${5}:${6}" if 
+	$filename =~ /(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)/;
+    return ($date, 'filename') if $date;
+
+    ## This is a 32bit UTC value, and at least with Kristas phone is
+    ## the time the video finished.  Prefer the start time if possible
+    my $qttime =   $et-> GetValue('CreateDate','Raw');
+    if ($qttime) {
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($qttime);	
+	$date = sprintf ("%04d-%02d-%02dT%02d:%02d:%02d", 
+			 $year+1900,$mon+1,$mday,$hour,$min,$sec);
+	return ($date, 'QT::CreateDate (UTC)');
+    }
+
+    # No proper data, make sure it is a media file
+    return () unless $filename =~ /\.(jpe?g|gif|png|bmp|mpg|mov|mp4|avi|wmv)$/i;
+
+    # Old Canon MPG files do not have any data
+    $date = $et-> GetValue('FileModifyDate');
+    return (NormalizeDate($date), 'FileModifyDate') if $date;
+
+    return ();
+}
+
+
 sub SetCreateDate {
     my ($et, $et_orig, $filename) = @_;
 
@@ -620,7 +707,7 @@ PERL_EOF
 	opendir(D, ".") || die "Can't open directory: $!\n";
 	while (my $f = readdir(D)) {
 	    next if not -f $f;
-	    next if not $f =~ /\.(jpe?g|gif|mov|avi|mpg|mp4|wmv|mkv)$/i;
+	    next if not $f =~ /\.(jpe?g|gif|png|bmp|mpg|mov|mp4|avi|wmv)$/i;
 	    
 	    my $p = $tags->GetPhoto($f);
 	    $p = $tags->MakePhoto($f, status=> 'new', %{$dflt}) unless $p;
@@ -796,6 +883,7 @@ Options are:
 
  -inc <num>	 - Use increment when renumbering.  Default is 10. 
 
+ -n		 - Print what would change but do not move.
  -o <file>       - Save the updated pixtag file as <file>.  By default 
 		   results are saved to the same file if there is only 
 		   one input or otherwise output goes to NEWTAGS.pixtag.
@@ -818,7 +906,7 @@ PERL_EOF
     my %opts = (
 	usr=>'dtl', base=>0, 
 	as_time=>0, inc=>10, date=>undef, 
-	force=>0, force_usr=>0);
+	force=>0, force_usr=>0, dryrun=>0);
 
     my $dstpt;
     my @srctags;
@@ -830,6 +918,7 @@ PERL_EOF
 	/^-tags$/ && do { shift; push @srctags, shift; next; };
 	/^-o$/ && do { shift; $dstpt = shift; next; };
 
+	/^-n$/ && do { shift; $opts{dryrun} = 1; next; };
 	/^-force$/ && do { shift; $opts{force} = 1; next; };
 	/^-forceusr$/ && do { 
 	    shift; $opts{usr} = shift; $opts{force_usr} = 1; next; 
@@ -910,37 +999,104 @@ PERL_EOF
 
 	    $dst{$f} = $name;
 	    $src{$name} = $f;
+	    print "$f --> $name\n";
 	}
     }
 
+    return if $opts{dryrun};
     # Move everything to a backup then to the final, so that we can
     # handle overlapping names.
-    my $savetags;
-    foreach my $f (sort keys %dst) {
-	my $bakfile = $dst{$f}.'BAK';
-	next if $f eq $dst{$f};
+    $tags->WriteXML($dstpt) if RenameMediaFiles(\%dst, $tags);
+}
 
-	print "$f --> $dst{$f}\n";
-	if (-f $bakfile) { 
-	    print "$bakfile ALREADY EXISTS!\n"; next; 
-	    delete $dst{$f};  # strange do not try to move
-	}
-	rename $f, $bakfile;
-	$savetags = 1 if $tags->RenamePhoto($f,$bakfile);
+
+
+
+#============================================================
+# RENAME FILES BASED ON DATE ================================
+#============================================================
+
+sub rename_exif {
+    my $usage = <<PERL_EOF;
+Usage: pix rename [options] <files>
+
+Rename files using the YYYYMMMDD_HHMMSS_usr naming convention.  The
+creation date is extracted from the EXIF or other metadata and any
+pixtag description are preserved.
+
+Options are:
+
+ -help           - print this help message.
+
+ -n		 - Print what would change but do not move.
+ -o <file>       - Save the updated pixtag file as <file>.  By default 
+		   results are saved to the same file if there is only 
+		   one input or otherwise output goes to NEWTAGS.pixtag.
+
+ -tags <file>	 - Read existing descriptions from <file>. By default 
+		   reads all .pixtag files in the directory.  This may
+		   be specified multiple times.
+
+ -usr <inits>	 - Trailing User ID for new filenames.   Default 'dtl'.
+		   Will preserve existing IDs on files.
+PERL_EOF
+;
+    my %opts = ( usr=>'dtl', dryrun=>0 );
+
+    my $dstpt;
+    my @srctags;
+    
+    while ($_[0]) {
+        $_ = $_[0];
+
+        /^-?help$/  && do { print $usage; return 0; };
+	/^-tags$/ && do { shift; push @srctags, shift; next; };
+	/^-o$/ && do { shift; $dstpt = shift; next; };
+
+	/^-n$/ && do { shift; $opts{dryrun} = 1; next; };
+	/^-usr$/ && do { shift; $opts{usr} = shift; next; };
+	/^-forceusr$/ && do { 
+	    shift; $opts{usr} = shift; $opts{force_usr} = 1; next; 
+	};
+	/^-/ && die "unknown option $_\n";
+
+	last;
+    }
+    my @files;
+    my (%dst);
+    for my $arg (@_) { push @files, (sort glob $arg); }
+
+    # read any existing tags files
+    @srctags = <*.pixtag> if (not scalar @srctags);
+    $dstpt = $srctags[0] if (not $dstpt) and (scalar @srctags) == 1;
+    $dstpt = 'NEWTAGS.pixtag' if (not $dstpt);
+
+    my $tags = PixTags->ReadXML(@srctags);
+    my $et = new Image::ExifTool;
+
+    foreach my $f (@files) {
+	$et->ExtractInfo($f);
+
+	my ($date,$src) = GetCreateDate($et,$f);
+	do {print "$f --> unchanged\n"; next; } unless $date;
+
+	my ($ext) = $f =~ /(\.[^\.]+)$/;
+	my ($usr) = $f =~ /^\d{8}_\d{6}_([a-z]+)\./i;
+	$usr = $opts{usr} if not $usr;
+	$usr = $opts{usr} if $opts{force_usr};
+	$ext = lc $ext; 
+
+	$date =~ tr/T:-/_/d;  # make T underscore, strip colons, dash
+	$date =~ s/^(\d{8}_\d{6}).*$/$1/;  # drop any extra timezone
+	$date .= "_$usr$ext";
+	print "$f --> $date ($src)\n";
+	$dst{$f} = $date;
     }
 
-    foreach my $f (sort keys %dst) {
-	my $bakfile = $dst{$f}.'BAK';
-	next if $f eq $dst{$f};
-
-	if (-f $dst{$f}) {
-	    print "$dst{$f} ALREADY EXISTS!\n"; next;
-	}
-	rename $bakfile, $dst{$f};
-	$savetags = 1 if $tags->RenamePhoto($bakfile,$dst{$f});
-    }
-
-    $tags->WriteXML($dstpt) if $savetags;
+    return if $opts{dryrun};
+    # Move everything to a backup then to the final, so that we can
+    # handle overlapping names.
+    $tags->WriteXML($dstpt) if RenameMediaFiles(\%dst, $tags);
 }
 
 
@@ -962,6 +1118,7 @@ sub main {
 
 	/^mv$/  && do { shift; return mv_file(@_); };
 	/^renum$/  && do { shift; return renum_files(@_); };
+	/^rename$/  && do { shift; return rename_exif(@_); };
 
 	print "unknown option $_\n";
 	return 1;
