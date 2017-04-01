@@ -6,7 +6,7 @@
 
 !include win32.cfg
 
-INSTDIR		= $(HOME)/bats
+INSTDIR		= $(HOME)\bats
 
 #========================================
 # Standard Symbolic Targets
