@@ -66,6 +66,11 @@ my %knowncams = (
 	Make => 'Eastman Kodak Company',
 	CameraModelName => 'Kodak C743 Zoom Digital Camera'
     },
+    vtech => {
+	desc => 'Kids Play Camera',
+	Make => 'VTech',
+	CameraModelName => 'VTech Kidizoom Digital Camera'
+    },
     );
 
 

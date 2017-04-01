@@ -9,7 +9,9 @@ use File::Find;
 use Image::ExifTool qw(:Public);
 use XML::LibXML;
 use XML::LibXML::PrettyPrint;
+use strict;
 
+my $pkg_version = "0.2";
 
 sub usage {
     print <<PERL_EOF;
@@ -127,6 +129,11 @@ my %knowncams = (
 	Make => 'Eastman Kodak Company',
 	CameraModelName => 'Kodak C743 Zoom Digital Camera'
     },
+    vtech => {
+	desc => 'Kids Play Camera',
+	Make => 'VTech',
+	CameraModelName => 'VTech Kidizoom Digital Camera'
+    },
     );
 
 
@@ -140,38 +147,54 @@ my %knowncams = (
     package PixTags;
 
     sub new { bless { photos=> {}, events=> {} }, $_[0] }
-    sub get_photo { return $_[0]->{photos}->{lc $_[1]}; }
-    sub get_event { return $_[0]->{events}->{lc $_[1]}; }
+    sub GetPhoto { return $_[0]->{photos}->{lc $_[1]}; }
+    sub GetEvent { return $_[0]->{events}->{lc $_[1]}; }
 
-    sub put_photo { 
+    sub IsEmpty { 
+	return 
+	    (not scalar %{$_[0]->{events}}) and
+	    (not scalar %{$_[0]->{photos}});
+    }
+
+    sub PutPhoto { 
 	my $n = lc $_[1]->{file}; 
 	$_[0]->{photos}->{lc $n} = $_[1]; 
     }
-    sub put_event { 
+    sub PutEvent { 
 	my $n = lc $_[1]->{id}; 
 	$_[0]->{events}->{lc $n} = $_[1]; 
     }
 
-    sub make_photo { 
+    sub MakePhoto { 
 	my ($o, $n, @args) = @_; 
 	my $p = { file=>$n, events=> [], @args };
-	$o->put_photo($p);  
+	$o->PutPhoto($p);  
 	return $p;
     }
-    sub make_event { 
+    sub MakeEvent { 
 	my ($o, $n, @args) = @_; 
 	my $e = { id=>$n, @args };
-	$o->put_event($e);  
+	$o->PutEvent($e);  
+	return $e;
+    }
+    sub DeletePhoto { return delete $_[0]->{photos}->{lc $_[1]}; }
+    sub DeleteEvent { return delete $_[0]->{events}->{lc $_[1]}; }
+
+    # renames in hash, returns photo if present and changed.
+    sub RenamePhoto {
+	my ($o, $src, $dst) = @_;
+	my $p = DeletePhoto($o, $src);
+	if ($p) { $p->{file} = $dst; PutPhoto($o, $p); } 
+	return $p;
+    }
+    sub RenameEvent {
+	my ($o, $src, $dst) = @_;
+	my $e = DeleteEvent($o, $src);
+	if ($e) { $e->{id} = $dst; PutEvent($o, $e); } 
 	return $e;
     }
 
-    sub rename_photo {
-	my ($o, $src, $dst) = @_;
-	my $p = get_photo($o, $src);
-	do { $p->{file} = $dst; put_photo($o, $p); } if $p;
-    }
-
-    sub readxml {
+    sub ReadXML {
 	my $cls = shift;
 	my $tags = $cls->new();
 	foreach (@_) {
@@ -182,9 +205,9 @@ my %knowncams = (
 	    foreach my $photo ($doc->findnodes('/pixscribe/photo')) 
 	    {
 		my $f = $photo->findvalue('./@file');
-		print $tagfile, ": duplicate photo $f\n" if $tags->get_photo($f);
+		print $tagfile, ": duplicate photo $f\n" if $tags->GetPhoto($f);
 
-		my $p = $tags->make_photo(
+		my $p = $tags->MakePhoto(
 		    $f, desc=> $photo->findvalue('./desc')
 		    );
 		
@@ -195,9 +218,9 @@ my %knowncams = (
 
 	    foreach my $event ($doc->findnodes('/pixscribe/event')) {
 		my $id = $event->findvalue('./@id');
-		print $tagfile, ": duplicate event $id\n" if $tags->get_event($id);
+		print $tagfile, ": duplicate event $id\n" if $tags->GetEvent($id);
 
-		$tags->make_event(
+		$tags->MakeEvent(
 		    $id, desc=> $event->findvalue('./desc')
 		    );
 	    }
@@ -205,7 +228,7 @@ my %knowncams = (
 	return $tags;
     }
     
-    sub writexml {
+    sub WriteXML {
 	my ($tags, $filename) = @_;
 	my $doc = XML::LibXML::Document->new();
 	my $pp = XML::LibXML::PrettyPrint->new(
@@ -416,37 +439,6 @@ sub SetMakeModel {
 
 
 
-sub fixtags_mp4 {
-
-    if ($tagcount == 0 and $datesrc eq 'ContentCreateDate') {
-	print " ==> has ContentCreateDate, SKIPPING\n";
-	return;
-    }
-    die "COULD NOT GET CREATE DATE" if not $createdate;
-
-    print " ==> date $createdate from $datesrc\n";
-    print " ==> set ContentCreateDate\n";
-
-    -f $tmp2file && do {
-	unlink $tmp1file or die "Could not remove TMP2FILE file";
-    };
-
-    # Make new MP4 container with the create date
-    my $cmd = "ffmpeg -hide_banner -loglevel warning -i $f  -c:v copy -c:a copy -movflags +faststart -metadata date=$createdate $tmp1file";
-    system ($cmd) == 0 or die "Problems in FFMPEG, halting";
-
-    # Add the other XMP tags using exiftool
-    # Note that WriteInfo returns nonzero on success, zero on error
-    $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
-	die "PROBLEMS WRITING metadata to $tmp2file, halting\n";
-
-    rename $f, "$origdir/$f" or die "Could not rename original";
-    rename $tmp2file, $f or die "Could not rename replacement file";
-
-    unlink $tmp1file or warn "Could not remove TEMP file";
-}
-
-
 sub transcode_canon_mov {
     my ($f, $opts) = @_;
     my $tmp1file = 'TEMP1.mp4';
@@ -616,6 +608,7 @@ PERL_EOF
 	/^-tags$/ && do { shift; push @srctags, shift; next; };
 	/^-n$/ && do { shift; $readonly = 1; next; };
 	/^-o$/ && do { shift; $dstpt = shift; next; };
+	/^-/ && die "unknown option $_\n";
 	last;
     }
 
@@ -623,11 +616,11 @@ PERL_EOF
     $dstpt = $srctags[0] if (not $dstpt) and (scalar @srctags) == 1;
     $dstpt = 'NEWTAGS.pixtag' if (not $dstpt);
     
-    my $tags = PixTags->readxml(@srctags);
+    my $tags = PixTags->ReadXML(@srctags);
 
     ## Add the events if they are not already there
     foreach my $id (@{$dflt->{events}}) {
-	$tags->make_event($id, desc=>' ') if not $tags->get_event($id);
+	$tags->MakeEvent($id, desc=>' ') if not $tags->GetEvent($id);
     }
     
     ## Scan the directories and create entries if needed
@@ -638,8 +631,8 @@ PERL_EOF
 	    next if not -f $f;
 	    next if not $f =~ /\.(jpe?g|gif|mov|avi|mpg|mp4|wmv|mkv)$/i;
 	    
-	    my $p = $tags->get_photo($f);
-	    $p = $tags->make_photo($f, status=> 'new', %{$dflt}) unless $p;
+	    my $p = $tags->GetPhoto($f);
+	    $p = $tags->MakePhoto($f, status=> 'new', %{$dflt}) unless $p;
 	    $p->{status} = 'ok' if not $p->{status};
 	}
 	closedir(D);
@@ -654,7 +647,7 @@ PERL_EOF
 	print $p->{file}, ": MISSING\n" if $p->{status} eq 'missing';
     }
     
-    $tags->writexml($dstpt) if not $readonly;
+    $tags->WriteXML($dstpt) if not $readonly;
 }
 
 
@@ -681,12 +674,13 @@ PERL_EOF
 
         /^-?help$/  && do { print $usage; return 0; };
 	/^-o$/ && do { shift; $dstpt = shift; next; };
+	/^-/ && die "unknown option $_\n";
 	last;
     }
 
     return 0 if not $_[0];
-    my $tags = PixTags->readxml(@_);
-    $tags->writexml($dstpt);
+    my $tags = PixTags->ReadXML(@_);
+    $tags->WriteXML($dstpt);
 }
 
 #============================================================
@@ -714,21 +708,22 @@ PERL_EOF
 
         /^-?help$/  && do { print $usage; return 0; };
 	/^-tags$/ && do { shift; push @srctags, shift; next; };
+	/^-/ && die "unknown option $_\n";
 	last;
     }
 
     @srctags = <*.pixtag> if not (scalar @srctags);
-    my $tags = PixTags->readxml(@srctags);
+    my $tags = PixTags->ReadXML(@srctags);
     foreach my $f (@_) {
-	my $p = $tags->get_photo($f);
+	my $p = $tags->GetPhoto($f);
 	if (not $p) {
 	    print $f, ": NOT FOUND\n";
 	}
 	print $f, "\n";
 	print $p->{desc}, "\n";
 	foreach my $ref (@{$p->{events}}) {
-	    my $e = $tags->get_event($ref);
-	    print $id, "\n" if not $e;
+	    my $e = $tags->GetEvent($ref);
+	    print $ref, "\n" if not $e;
 	    print "\n", $e->{desc}, "\n" if $e;
 	}
     }
@@ -736,7 +731,7 @@ PERL_EOF
 
 
 #============================================================
-# MV FILE ===================================================
+# MOVE FILE =================================================
 #============================================================
 
 sub mv_file {
@@ -766,6 +761,7 @@ PERL_EOF
         /^-?help$/  && do { print $usage; return 0; };
 	/^-tags$/ && do { shift; push @srctags, shift; next; };
 	/^-o$/ && do { shift; $dstpt = shift; next; };
+	/^-/ && die "unknown option $_\n";
 	last;
     }
 
@@ -773,17 +769,194 @@ PERL_EOF
     die "$src does not exist\n" if (not -e $src) or (not -f $src);
     die "no destination given\n" if not $dst;
 
-    @srctags = <*.pixtag> if (not $clean) and (not scalar @srctags);
+    @srctags = <*.pixtag> if (not scalar @srctags);
     $dstpt = $srctags[0] if (not $dstpt) and (scalar @srctags) == 1;
     $dstpt = 'NEWTAGS.pixtag' if (not $dstpt);
 
-    my $tags = PixTags->readxml(@srctags);
+    my $tags = PixTags->ReadXML(@srctags);
 
     rename $src,$dst or die "could not rename $src to $dst\n";
-    $tags->rename_photo($src,$dst);
-    $tags->writexml($dstpt);
+    $tags->WriteXML($dstpt) if $tags->RenamePhoto($src,$dst);
 }
 
+
+#============================================================
+# RENUMBER FILES ============================================
+#============================================================
+
+sub renum_files {
+    my $usage = <<PERL_EOF;
+Usage: pix renum [options] <files>
+
+Renumbers files and transfers the tag information to the new name.
+The file are named in the form 20171225_s0010_id.jpg, where the first
+part is a date and the second part is a sequence that increments by
+ten.  Use the -time option to name like 20171225_120010_id.jpg
+
+Options are:
+
+ -help           - print this help message.
+
+ -date <yyyymmdd> - Renumber all files with given date.  By default,
+		   tries to get the existing date from the filename.
+
+ -force		 - Overwrite time-formatted files with sequence. 
+ -forceusr <inits> - Like -usr but overwrite existing User IDs.
+
+ -inc <num>	 - Use increment when renumbering.  Default is 10. 
+
+ -o <file>       - Save the updated pixtag file as <file>.  By default 
+		   results are saved to the same file if there is only 
+		   one input or otherwise output goes to NEWTAGS.pixtag.
+
+ -seq <nnnn>	 - Base for sequence numbers.  Default is zero.  The
+                   photo are at base+1*inc, base+2*inc, etc.
+
+ -tags <file>	 - Read existing descriptions from <file>. By default 
+		   reads all .pixtag files in the directory.  This may
+		   be specified multiple times.
+
+ -time <hhmm>    - Use time as sequence for for renumbering.  By
+		   default renumbers with a 's1234' sequence rather
+		   than a time.  Time names usually start at 1200.
+
+ -usr <inits>	 - Trailing User ID for new filenames.   Default 'dtl'.
+		   Will preserve existing IDs on files.
+PERL_EOF
+;
+    my %opts = (
+	usr=>'dtl', base=>0, 
+	as_time=>0, inc=>10, date=>undef, 
+	force=>0, force_usr=>0);
+
+    my $dstpt;
+    my @srctags;
+    
+    while ($_[0]) {
+        $_ = $_[0];
+
+        /^-?help$/  && do { print $usage; return 0; };
+	/^-tags$/ && do { shift; push @srctags, shift; next; };
+	/^-o$/ && do { shift; $dstpt = shift; next; };
+
+	/^-force$/ && do { shift; $opts{force} = 1; next; };
+	/^-forceusr$/ && do { 
+	    shift; $opts{usr} = shift; $opts{force_usr} = 1; next; 
+	};
+
+	/^-usr$/ && do { shift; $opts{usr} = shift; next; };
+	/^-inc$/ && do { shift; $opts{inc} = shift; next; };
+	/^-seq$/ && do { shift; $opts{base} = shift; $opts{as_time}=0; next; };
+	/^-time$/ && do { 
+	    shift; $opts{base} = shift; 
+	    die "time format must be HHMM\n" if not $opts{base} =~ /^\d+$/;
+	    $opts{base} = $opts{base} * 100; 
+	    $opts{as_time}=1; next; 
+	};
+	/^-date$/ && do { 
+	    shift; $opts{date} = shift; 
+	    die "date format must be YYYYMMDD\n" if not $opts{date} =~ /\d{8}$/;
+	    next; 
+	};
+	/^-/ && die "unknown option $_\n";
+
+	last;
+    }
+    my $fmt = "_s%04d_";
+    $fmt = "_%06d_" if $opts{as_time};
+
+    my @files;
+    my (%bucket, %src, %dst);
+    for my $arg (@_) { push @files, (sort glob $arg); }
+
+    # sort all files into date buckets
+    foreach my $f (@files) {
+	my $date = $opts{date};
+	($date) = $f =~/(\d{8})_/ if not $date;
+	$date = 'nodate' if not $date;
+
+	if (exists $dst{$f}) {
+	    warn "$f specified multiple times"; 
+	    next;
+	}
+
+	if ((not $opts{force}) and
+	    (not $opts{as_time}) and
+	    $f =~ /\d{8}_\d{6}/) 
+	{
+	    die "$f: use -force to overwrite time with sequence\n";
+	}
+
+	$dst{$f} = undef;
+	$bucket{$date} = [] if not exists $bucket{$date};
+	push @{$bucket{$date}}, $f;
+    }
+
+    die "Could not determine date for: \n", join "\n", @{$bucket{nodate}} if
+	(exists $bucket{nodate});
+
+    # read any existing tags files
+    @srctags = <*.pixtag> if (not scalar @srctags);
+    $dstpt = $srctags[0] if (not $dstpt) and (scalar @srctags) == 1;
+    $dstpt = 'NEWTAGS.pixtag' if (not $dstpt);
+
+    my $tags = PixTags->ReadXML(@srctags);
+
+    # compute the destination names for all files
+    foreach my $d (sort keys %bucket) {
+	my $seq = $opts{base};
+	foreach my $f (@{$bucket{$d}}) {
+	    my ($ext) = $f =~ /(\.[^\.]+)$/;
+	    my ($usr) = $f =~ /^\d{8}_s?\d+_([a-z]+)\./i;
+	    $usr = $opts{usr} if not $usr;
+	    $usr = $opts{usr} if $opts{force_usr};
+
+	    $seq += $opts{inc};
+	    my $name = $d . sprintf($fmt, $seq) . $usr . $ext;
+
+	    die "$src{$name} and $f would both map to $name\n" if  
+		exists $src{$name};
+
+	    $dst{$f} = $name;
+	    $src{$name} = $f;
+	}
+    }
+
+    # Move everything to a backup then to the final, so that we can
+    # handle overlapping names.
+    my $savetags;
+    foreach my $f (sort keys %dst) {
+	my $bakfile = $dst{$f}.'BAK';
+	next if $f eq $dst{$f};
+
+	print "$f --> $dst{$f}\n";
+	if (-f $bakfile) { 
+	    print "$bakfile ALREADY EXISTS!\n"; next; 
+	    delete $dst{$f};  # strange do not try to move
+	}
+	rename $f, $bakfile;
+	$savetags = 1 if $tags->RenamePhoto($f,$bakfile);
+    }
+
+    foreach my $f (sort keys %dst) {
+	my $bakfile = $dst{$f}.'BAK';
+	next if $f eq $dst{$f};
+
+	if (-f $dst{$f}) {
+	    print "$dst{$f} ALREADY EXISTS!\n"; next;
+	}
+	rename $bakfile, $dst{$f};
+	$savetags = 1 if $tags->RenamePhoto($bakfile,$dst{$f});
+    }
+
+    $tags->WriteXML($dstpt) if $savetags;
+}
+
+
+
+#============================================================
+# MAIN ======================================================
+#============================================================
 
 
 
@@ -797,6 +970,7 @@ sub main {
 	/^taginfo$/  && do { shift; return taginfo(@_); };
 
 	/^mv$/  && do { shift; return mv_file(@_); };
+	/^renum$/  && do { shift; return renum_files(@_); };
 
 	print "unknown option $_\n";
 	return 1;
@@ -862,7 +1036,7 @@ sub oldmain {
         shift;
     }
 
-    for $arg (@files) {
+    for my $arg (@files) {
 	foreach (sort glob $arg) {
 	    /\.mov$/ && transcode_canon_mov($_, \%opts);
 	    /\.mp4$/ and $fixtags && fixtags_mp4($_, \%opts);

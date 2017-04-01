@@ -2,7 +2,29 @@
 == PixScribe Photo Annotation Tools
 ==
 
-Changes in release 0.1 (in progress)
+Changes in release 0.2 (in progress)
+
+* First update in about nine years.  Picture naming convention has
+  held up very well over the past 15 years and the pixtag description
+  files have also been fine.  Now curating large numbers of scanned
+  pictures and videos from dozens of sources and am running into the
+  limits of my tool set.
+
+* Rewrote all of the functionality of the pix.exe C program as a new
+  pix.pl perl script.  Command names have changed (update -> tagmake,
+  cat -> tagcat, get -> taginfo), but perl is more responsive and
+  easier integrate with other tools.
+
+* Added renum command to renumber blocks of files with management of
+  any existing pixtag annotations.
+
+* Added mv command to move a single files with management of any
+  existing pixtag annotations.
+
+* Added metadata curation using the exiftool library and conversion of
+  videos to a common known-good form (H264/AAC) with ffmpeg.
+
+Changes in release 0.1 (2008-03-14)
 
 * Added update command for managing changing directories of files.
 
