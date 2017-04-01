@@ -26,42 +26,13 @@ information, like \"pix tagmake -help\"
 
  help		Print this usage message
 
- tagmake	Update tags file with files in directory.
- tagcat		Combine tags files
- tagfind	Get description for a given file
+ tagmake	Update pixtag file with files in directory.
+ tagcat		Combine pixtag files
+ taginfo	Search pixtag files for a photo description
 
  mv		Rename file and entry in tag file (if any).
-
- metafix 	Update the tags to include create date tags for Plex
- cvt		Convert videos to MP4.
- renum 
-  rename 	Rename files using date_time_tag convention.
-
- import		Rename files followed by cvt pass
-
-
-
-
-
-
-Convert .mov file to mp4 using ffmpeg.  Copy over the exif tags to
-XML-exif ones, and add new things if needed.  Assume that mov files
-are from the canon camera.
-
--help		Print this usage message
-
--cvt		Convert video to MP4 
--rename		Rename file based on original date
--tag <inits>	Use inits when renaming the file
-
--import		Shorthand for -cvt -rename
-
--fixtags	Set creation date, make, model on MP4s
--setcam <type>	Set source camera tag if not set
--forcecam <type> As above, but force tag 
-		hi8 = Sony Hi8 Handycam (tapes)
-		fs100 = Canon FS100 (MPEG-2)
-		s200 = Canon S200 (AVIs)
+ renum		Renumber a group of files and update any associated 
+		annotations 
 PERL_EOF
 ;
     exit(0);
@@ -85,6 +56,26 @@ PERL_EOF
 #[XMP]           Image Unique ID                 : c657795e9df2e3362ce15babbf0485
 #[XMP]           File Source                     : Digital Camera
 
+
+
+# Convert .mov file to mp4 using ffmpeg.  Copy over the exif tags to
+# XML-exif ones, and add new things if needed.  Assume that mov files
+# are from the canon camera.
+
+# -help		Print this usage message
+
+# -cvt		Convert video to MP4 
+# -rename		Rename file based on original date
+# -tag <inits>	Use inits when renaming the file
+
+# -import		Shorthand for -cvt -rename
+
+# -fixtags	Set creation date, make, model on MP4s
+# -setcam <type>	Set source camera tag if not set
+# -forcecam <type> As above, but force tag 
+# 		hi8 = Sony Hi8 Handycam (tapes)
+# 		fs100 = Canon FS100 (MPEG-2)
+# 		s200 = Canon S200 (AVIs)
 my $origdir = 'd:/temp/BACKUP';
 my %origfiles;
 my %knowncams = (
