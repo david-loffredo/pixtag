@@ -268,3 +268,42 @@ use perl, superjpg and perhaps a MFC app to manage this database.
 The preclick lifetime organizer is XMP based and does a pretty good
 job of organizing the photos.
 
+
+
+2017-03-06 ----------------------------------------
+
+The IPTC Metadata Standard supplies that information, but in short:
+
+    Headline - A brief synopsis of the caption. It's not the same as title.
+
+    Title - A shorthand reference for the item. A human readable name
+    which can be text or numeric, may be the file name, but doesn't
+    have to be. It is not the same as headline.
+
+    Caption - Is Description (as of 1.1), which is basically the
+    description, including caption, of the items content.
+
+Read through the standard, you'll probably find it interesting. Bear
+in mind, it is intended for use by the International Press and it's
+geared that way. By the way, from the above, the way I read the
+standard is that you should be using Description (Caption) for example
+you gave above. Corrected: Services like Facebook or Flicker will use
+title or filename if supplied (thanks Bart).
+
+
+http://www.photometadata.org/META-Resources-Field-Guide-to-Metadata#Description
+
+Description [IPTC Core]
+The Description field, often referred to as “Caption,” should report the who, what and why of what the photograph depicts. If there is a person or people in the image, this caption might include their names, and/or their roles in any action taking place. If the image depicts a location, then it should describe the location. Don’t forget to also include this same “geographical” information in the appropriate fields (location, city, state/province, country) of the IPTC Core. The amount of detail to include depends on the image and whether it is documentary or conceptual. Typically, editorial images come with complete caption text, while advertising images may not.
+Note: This field is “shared” with the “Description” field in the Description panel of the Adobe Photoshop File Info dialogue.
+
+Editorial Example:
+TheShore Temple of the Seven Pagodas was built underNarsimha II of the Pallava dynasty between 7th and 8th century AD and is dedicated to Lord Shiva. It resembles the structure of the Dharmaraja rath, but its tower rises much higher (approx. five stories or ~ 60 ft. high) and its stupa spire is small and slender.
+
+Advertising Example:
+Paper tissue roll core, photographed upright.
+
+
+exiftool -EXIF:ImageDescription="an EXIF CAT"  20150108_103805_dtl.jpg
+exiftool -XMP:Description="an XMP CAT"   also works  20150108_103805_dtl.jpg
+

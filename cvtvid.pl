@@ -78,8 +78,13 @@ XML-exif ones, and add new things if needed.  Assume that mov files
 are from the canon camera.
 
 -help		Print this usage message
+
+-cvt		Convert video to MP4 
+-rename		Rename file based on original date
 -tag <inits>	Use inits when renaming the file
--rename		Rename file using original date
+
+-import		Shorthand for -cvt -rename
+
 -fixtags	Set creation date, make, model on MP4s
 -setcam <type>	Set source camera tag if not set
 -forcecam <type> As above, but force tag 

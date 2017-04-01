@@ -36,9 +36,8 @@ default: $(EXEC)
 library: $(LIBRARY)
 
 install-scripts:
-	$(CP) cvtvid.bat $(INSTDIR)
-	$(CP) cvtvid.pl $(INSTDIR)
-
+	$(CP) pix.bat $(INSTDIR)
+	$(CP) pix.pl $(INSTDIR)
 
 
 clean:
