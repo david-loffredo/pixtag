@@ -311,8 +311,9 @@ sub RenameMediaFiles {
 	next if $f eq $dst->{$f};
 
 	if (-f $bakfile) { 
-	    print "$bakfile ALREADY EXISTS!\n"; next; 
+	    print "$bakfile ALREADY EXISTS!\n"; 
 	    delete $dst->{$f};  # strange do not try to move
+	    next; 
 	}
 	rename $f, $bakfile;
 	$tagschanged = 1 if $tags->RenamePhoto($f,$bakfile);
@@ -323,7 +324,8 @@ sub RenameMediaFiles {
 	next if $f eq $dst->{$f};
 
 	if (-f $dst->{$f}) {
-	    print "$dst->{$f} ALREADY EXISTS!\n"; next;
+	    print "$dst->{$f} ALREADY EXISTS!\n"; 
+	    next;
 	}
 	rename $bakfile, $dst->{$f};
 	$tagschanged = 1 if $tags->RenamePhoto($bakfile,$dst->{$f});
