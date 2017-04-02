@@ -296,6 +296,9 @@ my %knowncams = (
 }
 
 
+sub IsMediaFile {
+    return $_[0] =~ /\.(jpe?g|gif|png|bmp|mpg|mov|mp4|avi|wmv)$/i;
+}
 
 sub RenameMediaFiles {
     my ($dst, $tags) = @_;
@@ -388,7 +391,7 @@ sub GetCreateDate {
     }
 
     # No proper data, make sure it is a media file
-    return () unless $filename =~ /\.(jpe?g|gif|png|bmp|mpg|mov|mp4|avi|wmv)$/i;
+    return () unless IsMediaFile($filename);
 
     # Old Canon MPG files do not have any data
     $date = $et-> GetValue('FileModifyDate');
@@ -707,7 +710,7 @@ PERL_EOF
 	opendir(D, ".") || die "Can't open directory: $!\n";
 	while (my $f = readdir(D)) {
 	    next if not -f $f;
-	    next if not $f =~ /\.(jpe?g|gif|png|bmp|mpg|mov|mp4|avi|wmv)$/i;
+	    next if not IsMediaFile($f);
 	    
 	    my $p = $tags->GetPhoto($f);
 	    $p = $tags->MakePhoto($f, status=> 'new', %{$dflt}) unless $p;
@@ -953,6 +956,8 @@ PERL_EOF
     foreach my $f (@files) {
 	my $date = $opts{date};
 	($date) = $f =~/(\d{8})_/ if not $date;
+
+	next if (not $date) and (not IsMediaFile($f));
 	$date = 'nodate' if not $date;
 
 	if (exists $dst{$f}) {
@@ -999,7 +1004,7 @@ PERL_EOF
 
 	    $dst{$f} = $name;
 	    $src{$name} = $f;
-	    print "$f --> $name\n";
+	    print "$f --> $name\n" if $f ne $name;
 	}
     }
 
