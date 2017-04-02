@@ -191,9 +191,13 @@ my %knowncams = (
 	foreach (@_) {
 	    my $tagfile = $_;
 	    my $doc = XML::LibXML->load_xml(location => $_);
+	    my ($root) = $doc->findnodes('/pixscribe');
+
+	    # old files used a different element
+	    ($root) = $doc->findnodes('/pixtag') if not $root;
 
 	    print $_, ": reading tags file\n"; 
-	    foreach my $photo ($doc->findnodes('/pixscribe/photo')) 
+	    foreach my $photo ($root->findnodes('./photo')) 
 	    {
 		my $f = $photo->findvalue('./@file');
 		print $tagfile, ": duplicate photo $f\n" if $tags->GetPhoto($f);
@@ -207,7 +211,7 @@ my %knowncams = (
 		}
 	    }
 
-	    foreach my $event ($doc->findnodes('/pixscribe/event')) {
+	    foreach my $event ($root->findnodes('./event')) {
 		my $id = $event->findvalue('./@id');
 		print $tagfile, ": duplicate event $id\n" if $tags->GetEvent($id);
 
@@ -956,6 +960,8 @@ PERL_EOF
 
     # sort all files into date buckets
     foreach my $f (@files) {
+	next if not -f $f;
+
 	my $date = $opts{date};
 	($date) = $f =~/(\d{8})_/ if not $date;
 
@@ -1082,6 +1088,8 @@ PERL_EOF
     my $et = new Image::ExifTool;
 
     foreach my $f (@files) {
+	next if not -f $f;
+
 	$et->ExtractInfo($f);
 
 	my ($date,$loc) = GetCreateDate($et,$f);
