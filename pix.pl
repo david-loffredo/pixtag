@@ -1063,7 +1063,7 @@ PERL_EOF
 	last;
     }
     my @files;
-    my (%dst);
+    my (%src, %dst);
     for my $arg (@_) { push @files, (sort glob $arg); }
 
     # read any existing tags files
@@ -1077,7 +1077,7 @@ PERL_EOF
     foreach my $f (@files) {
 	$et->ExtractInfo($f);
 
-	my ($date,$src) = GetCreateDate($et,$f);
+	my ($date,$loc) = GetCreateDate($et,$f);
 	do {print "$f --> unchanged\n"; next; } unless $date;
 
 	my ($ext) = $f =~ /(\.[^\.]+)$/;
@@ -1088,9 +1088,19 @@ PERL_EOF
 
 	$date =~ tr/T:-/_/d;  # make T underscore, strip colons, dash
 	$date =~ s/^(\d{8}_\d{6}).*$/$1/;  # drop any extra timezone
-	$date .= "_$usr$ext";
-	print "$f --> $date ($src)\n";
-	$dst{$f} = $date;
+
+	my $name = "${date}_$usr$ext";
+	
+	my $seq;
+	while (exists $src{$name}) {
+	    warn "$name already use for $src{$name}\n";
+	    $seq++;
+	    $name = "${date}_$usr$seq$ext";
+	}
+	print "$f --> $name ($loc)\n";
+
+	$src{$name} = $f;
+	$dst{$f} = $name;
     }
 
     return if $opts{dryrun};
