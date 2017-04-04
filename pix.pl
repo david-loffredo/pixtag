@@ -18,21 +18,25 @@ sub usage {
 Usage: $0 [command] <options>
 
 Rename files to date convention, convert video to known-good MP4
-settings, embed metadata for plex, and manage pixtag xml files with
-picture descriptions.
+settings, embed metadata for plex, and manage *.pixtag xml photo
+description files.
 
 The following commands are available.  Call with -help for more
 information, like \"pix tagmake -help\"
 
  help		Print this usage message
 
+ tagcat		Combine photo description files
+ tagevent	Add an event to the description for photo
+ taginfo	Find and print photo description 
  tagmake	Update pixtag file with files in directory.
- tagcat		Combine pixtag files
- taginfo	Search pixtag files for a photo description
 
  mv		Rename file and entry in tag file (if any).
  renum		Renumber a group of files and update any associated 
 		annotations 
+
+    cvt - convert video to normal form
+    rotate - automatically rotate pictures using embedded orientation (needs jhead)
 PERL_EOF
 ;
     exit(0);
@@ -783,6 +787,10 @@ Options are:
 
  -help		- print this help message.
 
+ -o <file>      - Save the updated pixtag file as <file>.  By default 
+		  results are saved to the same file if there is only 
+		  one input or otherwise output goes to NEWTAGS.pixtag.
+
  -tags <file>	- Search descriptions in <file>. By default, this 
 		  searches all .pixtag files in the directory.  This
 		  may be specified multiple times.
@@ -814,6 +822,74 @@ PERL_EOF
 	    print "\n", $e->{desc}, "\n" if $e;
 	}
     }
+}
+
+
+
+
+
+#============================================================
+# TAG EVENT  ================================================
+#============================================================
+
+sub tagevent {
+    my $usage = <<PERL_EOF;
+Usage: pix tagevent [options] <eventid> <media-files> ...
+
+Add an event reference to the descriptions of media files.  
+Options are:
+
+ -help		- print this help message.
+
+ -tags <file>	- Search descriptions in <file>. By default, this 
+		  searches all .pixtag files in the directory.  This
+		  may be specified multiple times.
+PERL_EOF
+;
+    my ($dstpt);
+    my @srctags;
+    
+    while ($_[0]) {
+        $_ = $_[0];
+
+        /^-?help$/  && do { print $usage; return 0; };
+	/^-tags$/ && do { shift; push @srctags, shift; next; };
+	/^-o$/ && do { shift; $dstpt = shift; next; };
+	/^-/ && die "unknown option $_\n";
+	last;
+    }
+    my $change;
+    my $event = shift;
+    die "must specify an event id" if not $event;
+
+    my @files;
+    for my $arg (@_) { push @files, (sort glob $arg); }
+
+    # read any existing tags files
+    @srctags = <*.pixtag> if (not scalar @srctags);
+    $dstpt = $srctags[0] if (not $dstpt) and (scalar @srctags) == 1;
+    $dstpt = 'NEWTAGS.pixtag' if (not $dstpt);
+
+    my $tags = PixTags->ReadXML(@srctags);
+    
+    ## Add the event if not already there
+    $tags->MakeEvent($event, desc=>' ') if not $tags->GetEvent($event);
+
+    foreach my $f (@files) {
+	next if not -f $f;
+	next if not IsMediaFile($f);
+	    
+	my $p = $tags->GetPhoto($f);
+	$p = $tags->MakePhoto($f, desc=>' ') unless $p;
+
+	if (not grep /^$event$/, @{$p->{events}}) {
+	    push @{$p->{events}}, $event;
+	    print "$p->{file}: added event\n";
+	    $change++;
+	}
+    }
+    
+    $tags->WriteXML($dstpt) if $change;
 }
 
 
@@ -1137,9 +1213,10 @@ sub main {
         $_ = $_[0];
 
         /^-?help$/  && do { return usage(); };
-	/^tagmake$/ && do { shift; return tagmake(@_); };
 	/^tagcat$/  && do { shift; return tagcat(@_); };
+	/^tagevent$/  && do { shift; return tagevent(@_); };
 	/^taginfo$/  && do { shift; return taginfo(@_); };
+	/^(tagmake|maketag)$/ && do { shift; return tagmake(@_); };
 
 	/^mv$/  && do { shift; return mv_file(@_); };
 	/^renum$/  && do { shift; return renum_files(@_); };
