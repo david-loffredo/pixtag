@@ -32,6 +32,7 @@ information, like \"pix tagmake -help\"
  tagmake	Update pixtag file with files in directory.
 
  mv		Rename file and entry in tag file (if any).
+ mvdir		Move file file and associated tags to new directory.
  renum		Renumber a group of files and update any associated 
 		annotations 
 
@@ -943,6 +944,62 @@ PERL_EOF
 }
 
 
+
+#============================================================
+# MOVE FILE =================================================
+#============================================================
+
+sub mv_filedir {
+    my $usage = <<PERL_EOF;
+Usage: pix mvdir [options] <src ... > <dstdir>
+
+Renames a file and transfers the tag information to the new name.
+
+Options are:
+
+ -help           - print this help message.
+ -o <file>       - Save the updated pixtag file as <file>.  By default 
+		   results are saved to the same file if there is only 
+		   one input or otherwise output goes to NEWTAGS.pixtag.
+
+ -tags <file>	 - Read existing descriptions from <file>. By default 
+		   reads all .pixtag files in the directory.  This may
+		   be specified multiple times.
+PERL_EOF
+;
+    while ($_[0]) {
+        $_ = $_[0];
+
+        /^-?help$/  && do { print $usage; return 0; };
+	/^-/ && die "unknown option $_\n";
+	last;
+    }
+
+    my ($src, $dst) = @_;
+    die "$src does not exist\n" if (not -e $src) or (not -f $src);
+    die "$dst directory does not exist\n" if (not -e $dst) or (not -d $dst);
+    die "no destination given\n" if not $dst;
+
+    $dst =~ s#\\#/#g;
+    
+    my ($srcpt) = <*.pixtag>;
+    my ($dstpt) = <$dst/*.pixtag>;
+    $dstpt = 'NEWTAGS.pixtag' if (not $dstpt);
+
+    my $srctags = PixTags->ReadXML($srcpt);
+    my $dsttags = PixTags->ReadXML($dstpt);
+
+    my $p = $srctags-> DeletePhoto($src);
+    if ($p) { $dsttags-> PutPhoto($p); } 
+
+    die "$dst/$src exists" if -e "$dst/$src";
+    rename $src,"$dst/$src" or die "could not rename $src to $dst\n";
+    
+    $srctags->WriteXML($srcpt) if $p;
+    $dsttags->WriteXML($dstpt) if $p;
+}
+
+
 #============================================================
 # RENUMBER FILES ============================================
 #============================================================
@@ -1219,6 +1276,7 @@ sub main {
 	/^(tagmake|maketag)$/ && do { shift; return tagmake(@_); };
 
 	/^mv$/  && do { shift; return mv_file(@_); };
+	/^mvdir$/  && do { shift; return mv_filedir(@_); };
 	/^renum$/  && do { shift; return renum_files(@_); };
 	/^rename$/  && do { shift; return rename_exif(@_); };
 
