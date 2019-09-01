@@ -4,6 +4,10 @@
 
 Changes in release 0.2 (in progress)
 
+* Adding convert action to pix.pl to curate all of the odd video
+  formats into a common mp4 base.  Merged the cvtvid.pl script with
+  code for handling cannon elph movs with ffmpeg.
+
 * First update in about nine years.  Picture naming convention has
   held up very well over the past 15 years and the pixtag description
   files have also been fine.  Now curating large numbers of scanned

@@ -33,11 +33,14 @@ information, like \"pix tagmake -help\"
 
  mv		Rename file and entry in tag file (if any).
  mvdir		Move file file and associated tags to new directory.
- renum		Renumber a group of files and update any associated 
-		annotations 
+ renum		Renumber files and update any associated annotations.
+ rename		Rename to canonical date format based on exif data. 
 
-    cvt - convert video to normal form
-    rotate - automatically rotate pictures using embedded orientation (needs jhead)
+ cvt		Convert video to normal form
+ fixtags	Normalize the EXIF tags in a video
+
+STILL UNDER DEVELOPMENT
+ rotate		Automatically rotate and strip orientation tags (needs jhead)
 PERL_EOF
 ;
     exit(0);
@@ -84,46 +87,62 @@ PERL_EOF
 my $origdir = 'd:/temp/BACKUP';
 my %origfiles;
 my %knowncams = (
-    hi8 => {
-	desc => 'Sony 8mm tape camcorder',
-	Make => 'Sony',
-	CameraModelName => 'Sony Hi8 Handycam'
-    },
-    fs100 => {
-	desc => 'Canon early digital camcorder',
+    'canon-elph110' => {
+	desc => 'Our 2012-2019 Canon camera (.mov)',
 	Make => 'Canon',
-	CameraModelName => 'Canon FS100'
+	CameraModelName => 'Canon PowerShot ELPH110',
+	cvtfn => \&transcode_canon_elph110
     },
-    s200 => {
-	desc => 'Our original Canon digital camera',
+    'canon-fs100' => {
+	desc => 'Our Canon early digital SD camcorder (MPEG-2)',
+	Make => 'Canon',
+	CameraModelName => 'Canon FS100',
+	cvtclass => \&transcode_canon_sd
+    },
+    'canon-s200' => {
+	desc => 'Our 2002-2012 Canon camera (.avi)',
 	Make => 'Canon',
 	CameraModelName => 'Canon PowerShot S200'
     },
-    sd200 => {
-	desc => 'Rudy/Judy original Canon digital camera',
-	Make => 'Canon',
-	CameraModelName => 'Canon PowerShot SD200'
-    },
-    s400 => {
-	desc => 'Dads original Canon digital camera',
+    'canon-s400' => {
+	desc => 'Dads original Canon digital camera (.avi)',
 	Make => 'Canon',
 	CameraModelName => 'Canon PowerShot S400'
     },
-    dsc2100 => {
-	desc => 'Judy new sony camera',
-	Make => 'Sony',
-	CameraModelName => 'Sony DSC-S2100'
+    'canon-sd200' => {
+	desc => 'Rudy/Judy original Canon digital camera (.avi)',
+	Make => 'Canon',
+	CameraModelName => 'Canon PowerShot SD200'
     },
-
-    moto => {
+    'iphone-se' => {
+	desc => 'Dave iPhone (.mov)',
+	Make => 'Apple',
+	CameraModelName => 'iPhone SE'
+    },
+    'kodak-c743' => {
+	desc => 'Dads Kodak Camera',
+	Make => 'Eastman Kodak Company',
+	CameraModelName => 'Kodak C743 Zoom Digital Camera'
+    },
+    'moto-g6' => {
+	desc => 'Krista/Emma Motorola Phone',
+	Make => 'Motorola',
+	CameraModelName => 'Motorola Moto G6 Play XT1922'
+    },
+    'moto-g' => {
 	desc => 'Kristas Motorola Phone',
 	Make => 'Motorola',
 	CameraModelName => 'Motorola Moto G XT1031'
     },
-    c743 => {
-	desc => 'Dads Kodak Camera',
-	Make => 'Eastman Kodak Company',
-	CameraModelName => 'Kodak C743 Zoom Digital Camera'
+    'sony-dsc2100' => {
+	desc => 'Judy new sony camera',
+	Make => 'Sony',
+	CameraModelName => 'Sony DSC-S2100'
+    },
+    'sony-hi8' => {
+	desc => 'Sony 8mm camcorder (tapes)',
+	Make => 'Sony',
+	CameraModelName => 'Sony Hi8 Handycam'
     },
     vtech => {
 	desc => 'Kids Play Camera',
@@ -131,7 +150,6 @@ my %knowncams = (
 	CameraModelName => 'VTech Kidizoom Digital Camera'
     },
     );
-
 
 #============================================================
 # TAG FILE CLASS ============================================
@@ -530,127 +548,6 @@ sub SetMakeModel {
 }
 
 
-
-sub transcode_canon_mov {
-    my ($f, $opts) = @_;
-    my $tmp1file = 'TEMP1.mp4';
-    my $tmp2file = 'TEMP2.mp4';
-    my $origdir = 'original_files';
-
-    if (-f $tmp1file) { unlink $tmp1file or die "Could not remove $tmp1file"; }
-    if (-f $tmp2file) { unlink $tmp2file or die "Could not remove $tmp2file"; }
-    
-    if (not -d $origdir) {
-	mkdir $origdir or die "Could not create backup dir";
-    }
-
-    print "$f\n";
-    
-    my $et_orig = new Image::ExifTool;
-    $et_orig->ExtractInfo($f);
-
-    my $et = new Image::ExifTool;
-    my $datesource;
-
-    # Do not stomp on all of the quicktime data that is in there.
-    $et->SetNewValuesFromFile($f);
-
-    # Check the creation date and camera info.  This sets the exiftool
-    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
-    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
-
-
-
-    
-    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
-    die "COULD NOT GET CREATE DATE" if not $createdate;
-
-    if ($opts->{rename}) {
-	## expect iso format 2017-02-19T16:55:55
-	my $val = $createdate;
-	$val =~ tr/T:-/_/d;  # make T underscore, strip colons, dash
-	$tmp2file = "${val}_$opts->{tag}.mp4";
-    }
-
-    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
-
-    -f $tmp2file && do {
-	warn "FILE ALREADY EXISTS: $tmp2file, skipping\n";
-	return;
-    };
-
-    # Use the same pixel format as the input data (+).  The canon
-    # camera shoots with a pixel format of yuvj420p, which has full
-    # 0-255 range per channel, so keep that rather than the yuv420p
-    # which has a smaller range.
-    #
-    # The + will work for the canon too, but explicitly specify to
-    # suppress a warning about the unusual format.
-    my $pixfmt = '+';
-    $pixfmt = 'yuvj420p' if 
-	$et-> GetNewValue('XMP-tiff:Model') =~ /PowerShot ELPH 110/;
-
-    # Compress with a CRF of 16 which is basically original quality.
-    # Always convert the audio to AAC.  No need for -map_metadata 0
-    # because we are adding the tags afterwards.
-    my $cmd = "ffmpeg -hide_banner -loglevel warning -i $f -c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 -pix_fmt $pixfmt -movflags +faststart -c:a aac -b:a 160k -metadata date=$createdate $tmp1file";
-    
-    print "Converting $f\n";
-    system ($cmd) == 0 or die "Problems in FFMPEG, halting";
-
-    my $origsz = (-s $f);
-    my $newsz = (-s $tmp1file);
-    my $ratio = 0;
-    $ratio = $newsz / $origsz unless $origsz == 0;
-
-    if ($ratio > 0.95) {
-	# Certain high-motion video will not compress much and may
-	# even be larger.  If we get less than 5% saving, redo with
-	# compressed audio but the original video (no transcode)
-	#
-	$cmd = "ffmpeg -hide_banner -loglevel warning -i $f  -c:v copy -movflags +faststart -c:a aac -c:a aac -b:a 160k -metadata date=$createdate $tmp1file";
-
-	print sprintf(" ==> minimal savings (%d%%), keeping original video\n", (1 - $ratio) * 100);
-
-	unlink $tmp1file or die "Could not remove TEMP file";
-	system ($cmd) == 0 or die "Problems in FFMPEG, halting";
-
-	$newsz = (-s $tmp1file);
-	$ratio = $newsz / $origsz unless $origsz == 0;
-    }
-
-    # Note that WriteInfo returns nonzero on success, zero on error
-    $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
-	die "PROBLEMS WRITING metadata to $tmp2file, halting\n";
-
-    unlink $tmp1file or warn "Could not remove TEMP file";
-
-    print sprintf(" ==> $tmp2file [saved %d%%]\n", (1 - $ratio) * 100);
-
-    # done, rename the original
-    rename $f, "$origdir/$f" or die "Could not rename original";
-}
-
-sub scanorig {
-    # only look at real files
-    return if not -f;
-    return if /\.(jpg|bmp|mkv)$/;
-    return if $File::Find::name =~ /original_(createdate|movies)/;
-
-    my $base = $_;
-    $base =~ s/\.[^\.]+//;
-    $origfiles{$base} = { file=>$File::Find::name };
-    $origfiles{$base}->{src} = 's200' if /\.avi$/;
-    $origfiles{$base}->{src} = 's400' if /_jcl\.avi$/;
-    $origfiles{$base}->{src} = 'sd200' if /_rz\.avi$/;
-    $origfiles{$base}->{src} = 'fs100' if /\.mpg$/;
-    if (/_jz\.avi$/) {
-	$origfiles{$base}->{src} = 'sd200';
-	$origfiles{$base}->{src} = 'dsc2100' if /^2011/;
-    }
-    
-#    print "$base, src=$origfiles{$base}->{src}, $origfiles{$base}->{file}\n";
-}
 
 
 
@@ -1257,35 +1154,32 @@ PERL_EOF
     $tags->WriteXML($dstpt) if RenameMediaFiles(\%dst, $tags);
 }
 
-
-
 #============================================================
-# MAIN ======================================================
+# FIX EXIF TAGS
 #============================================================
+sub fixtags_exif {
+    my $usage = <<PERL_EOF;
+Usage: pix fixtags [options] <files>
 
+Fix exif tags in image or video files.
 
+Options are:
 
-sub main {
-    while ($_[0]) {
-        $_ = $_[0];
+ -help           - print this help message.
 
-        /^-?help$/  && do { return usage(); };
-	/^tagcat$/  && do { shift; return tagcat(@_); };
-	/^tagevent$/  && do { shift; return tagevent(@_); };
-	/^taginfo$/  && do { shift; return taginfo(@_); };
-	/^(tagmake|maketag)$/ && do { shift; return tagmake(@_); };
+ -n		 - Print what would change but do not move.
+ -o <file>       - Save the updated pixtag file as <file>.  By default 
+		   results are saved to the same file if there is only 
+		   one input or otherwise output goes to NEWTAGS.pixtag.
 
-	/^mv$/  && do { shift; return mv_file(@_); };
-	/^mvdir$/  && do { shift; return mv_filedir(@_); };
-	/^renum$/  && do { shift; return renum_files(@_); };
-	/^rename$/  && do { shift; return rename_exif(@_); };
+ -tags <file>	 - Read existing descriptions from <file>. By default 
+		   reads all .pixtag files in the directory.  This may
+		   be specified multiple times.
 
-	print "unknown option $_\n";
-	return 1;
-    }
-}
-
-sub oldmain {
+ -usr <inits>	 - Trailing User ID for new filenames.   Default 'dtl'.
+		   Will preserve existing IDs on files.
+PERL_EOF
+;
     my %opts = (tag=>'dtl', rename=>0);
     my @files;
     my $fixtags = 0;
@@ -1293,20 +1187,6 @@ sub oldmain {
     while ($_[0]) {
         $_ = $_[0];
 
-        /^-help$/ && &usage;
-	/^-tag$/ && do {
-            shift; $opts{tag} = shift;
-            next;
-        };
-	/^-rename$/ && do {
-            shift; $opts{rename} = 1;
-            next;
-        };
-
-	/^-fixtags$/ && do {
-            shift; $fixtags = 1;
-            next;
-        };
 	/^-(set|force)cam$/ && do {
             shift; $fixtags = 1;
 	    $opts{forcecam} = 1 if $1 eq 'force';
@@ -1330,26 +1210,300 @@ sub oldmain {
 	    $opts{setcam} = 1;
             next;
         };
-
 	/^-findorig$/ && do {
 	    # match original camera
 	    find(\&scanorig, $origdir);
 	    $opts{findorig} = 1;
 	    shift; next;
 	};
-
-        /^-/ && die "$0: unknown option: $_ (use -help for usage)\n";
-
-        push @files, $_;  # tack on as just a plain file
-        shift;
     }
 
-    for my $arg (@files) {
-	foreach (sort glob $arg) {
-	    /\.mov$/ && transcode_canon_mov($_, \%opts);
-	    /\.mp4$/ and $fixtags && fixtags_mp4($_, \%opts);
+    my @files;
+    my (%src, %dst);
+    for my $arg (@_) { push @files, (sort glob $arg); }
+
+    for my $f (@files) {
+	/\.mp4$/ and $fixtags && fixtags_mp4($_, \%opts);
+    }
+}
+
+
+sub scanorig {
+    # only look at real files
+    return if not -f;
+    return if /\.(jpg|bmp|mkv)$/;
+    return if $File::Find::name =~ /original_(createdate|movies)/;
+
+    my $base = $_;
+    $base =~ s/\.[^\.]+//;
+    $origfiles{$base} = { file=>$File::Find::name };
+    $origfiles{$base}->{src} = 's200' if /\.avi$/;
+    $origfiles{$base}->{src} = 's400' if /_jcl\.avi$/;
+    $origfiles{$base}->{src} = 'sd200' if /_rz\.avi$/;
+    $origfiles{$base}->{src} = 'fs100' if /\.mpg$/;
+    if (/_jz\.avi$/) {
+	$origfiles{$base}->{src} = 'sd200';
+	$origfiles{$base}->{src} = 'dsc2100' if /^2011/;
+    }
+    
+#    print "$base, src=$origfiles{$base}->{src}, $origfiles{$base}->{file}\n";
+}
+
+
+sub fixtags_mp4 {
+    my ($f, $opts) = @_;
+    my $tmpfile = 'TEMP.mp4';
+    my $newfile = 'NEWFILE.mp4';
+    my $origdir = 'original_createdate';
+
+    if (-f $tmpfile) {
+	unlink $tmpfile or die "Could not remove TEMP file";
+    }
+    
+    if (not -d $origdir) {
+	mkdir $origdir or die "Could not create backup dir";
+    }
+
+    print "$f\n";
+    
+    my $et_orig = new Image::ExifTool;
+    $et_orig->ExtractInfo($f);
+
+    my $et = new Image::ExifTool;
+    my $datesource;
+
+    # Do not stomp on all of the quicktime data that is in there.
+    $et->SetNewValuesFromFile($f);
+    
+    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
+    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
+
+    if ($tagcount == 0 and $datesrc eq 'ContentCreateDate') {
+	print " ==> has ContentCreateDate, SKIPPING\n";
+	return;
+    }
+    die "COULD NOT GET CREATE DATE" if not $createdate;
+
+    print " ==> date $createdate from $datesrc\n";
+    print " ==> set ContentCreateDate\n";
+
+    -f $newfile && do {
+	unlink $tmpfile or die "Could not remove NEWFILE file";
+    };
+
+    # Make new MP4 container with the create date
+    my $cmd = "ffmpeg -hide_banner -loglevel warning -i $f  -c:v copy -c:a copy -movflags +faststart -metadata date=$createdate $tmpfile";
+    system ($cmd) == 0 or die "Problems in FFMPEG, halting";
+
+    # Add the other XMP tags using exiftool
+    # Note that WriteInfo returns nonzero on success, zero on error
+    $et->WriteInfo($tmpfile, $newfile) == 0 and 
+	die "PROBLEMS WRITING metadata to $newfile, halting\n";
+
+    rename $f, "$origdir/$f" or die "Could not rename original";
+    rename $newfile, $f or die "Could not rename replacement file";
+
+    unlink $tmpfile or warn "Could not remove TEMP file";
+}
+
+
+
+#============================================================
+# CONVERT VIDEO FORMATS
+#============================================================
+sub convert_video {
+    my $usage = <<PERL_EOF;
+Usage: pix cvt [options] <srctype> <files>
+
+Convert video from the given camera source to normalized mp4 using
+ffmpeg.  Copy exif tags to XML-exif ones, and add new things if
+needed.  The conversion varies depending on the source type.
+
+Options are:
+
+ -help           - print this help message.
+
+PERL_EOF
+;
+    my %opts = ( usr=>'dtl', dryrun=>0 );
+
+    while ($_[0]) {
+        $_ = $_[0];
+
+        /^-?help$/  && do { 
+	    print $usage; 
+	    print "Known camera sources:\n\n";
+	    foreach my $n (sort keys %knowncams) {
+		print "  $n\t$knowncams{$n}->{desc}\n";
+	    }
+	    return 0; 
+
+	};
+	/^-/ && die "unknown option $_\n";
+
+	last;
+    }
+
+    my $srctype = shift;
+    die "Unknown source type $srctype" if not exists $knowncams{$srctype}; 
+
+    my @files;
+    my (%src, %dst);
+    for my $arg (@_) { push @files, (sort glob $arg); }
+
+    if (exists $knowncams{$srctype}->{cvtfn}) {
+	my $cvtfn = $knowncams{$srctype}->{cvtfn};
+	for my $f (@files) {
+	    $cvtfn->($f, \%opts);
 	}
+	return 0;
     }
+
+    if (exists $knowncams{$srctype}->{cvtclass}) {
+	$knowncams{$srctype}->{cvtclass}->(\@files, \%opts);
+	return 0;
+    }
+
+    print "No conversion routine known for $srctype\n";
+    return 0;
+}
+
+
+sub transcode_canon_elph110 {
+    my ($f, $opts) = @_;
+    my $tmp1file = 'TEMP1.mp4';
+    my $tmp2file = 'TEMP2.mp4';
+    my $origdir = 'original_files';
+
+    if (-f $tmp1file) { unlink $tmp1file or die "Could not remove $tmp1file"; }
+    if (-f $tmp2file) { unlink $tmp2file or die "Could not remove $tmp2file"; }
+    
+    if (not -d $origdir) {
+	mkdir $origdir or die "Could not create backup dir";
+    }
+
+    print "$f\n";
+    
+    my $et_orig = new Image::ExifTool;
+    $et_orig->ExtractInfo($f);
+
+    my $et = new Image::ExifTool;
+    my $datesource;
+
+    # Do not stomp on all of the quicktime data that is in there.
+    $et->SetNewValuesFromFile($f);
+
+    # Check the creation date and camera info.  This sets the exiftool
+    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
+    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
+
+
+
+    
+    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
+    die "COULD NOT GET CREATE DATE" if not $createdate;
+
+    if ($opts->{rename}) {
+	## expect iso format 2017-02-19T16:55:55
+	my $val = $createdate;
+	$val =~ tr/T:-/_/d;  # make T underscore, strip colons, dash
+	$tmp2file = "${val}_$opts->{tag}.mp4";
+    }
+
+    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
+
+    -f $tmp2file && do {
+	warn "FILE ALREADY EXISTS: $tmp2file, skipping\n";
+	return;
+    };
+
+    # Use the same pixel format as the input data (+).  The canon
+    # camera shoots with a pixel format of yuvj420p, which has full
+    # 0-255 range per channel, so keep that rather than the yuv420p
+    # which has a smaller range.
+    #
+    # The + will work for the canon too, but explicitly specify to
+    # suppress a warning about the unusual format.
+    my $pixfmt = '+';
+    $pixfmt = 'yuvj420p' if 
+	$et-> GetNewValue('XMP-tiff:Model') =~ /PowerShot ELPH 110/;
+
+    # Compress with a CRF of 16 which is basically original quality.
+    # Always convert the audio to AAC.  No need for -map_metadata 0
+    # because we are adding the tags afterwards.
+    my $cmd = "ffmpeg -hide_banner -loglevel warning -i $f -c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 -pix_fmt $pixfmt -movflags +faststart -c:a aac -b:a 160k -metadata date=$createdate $tmp1file";
+    
+    print "Converting $f\n";
+    system ($cmd) == 0 or die "Problems in FFMPEG, halting";
+
+    my $origsz = (-s $f);
+    my $newsz = (-s $tmp1file);
+    my $ratio = 0;
+    $ratio = $newsz / $origsz unless $origsz == 0;
+
+    if ($ratio > 0.95) {
+	# Certain high-motion video will not compress much and may
+	# even be larger.  If we get less than 5% saving, redo with
+	# compressed audio but the original video (no transcode)
+	#
+	$cmd = "ffmpeg -hide_banner -loglevel warning -i $f  -c:v copy -movflags +faststart -c:a aac -c:a aac -b:a 160k -metadata date=$createdate $tmp1file";
+
+	print sprintf(" ==> minimal savings (%d%%), keeping original video\n", (1 - $ratio) * 100);
+
+	unlink $tmp1file or die "Could not remove TEMP file";
+	system ($cmd) == 0 or die "Problems in FFMPEG, halting";
+
+	$newsz = (-s $tmp1file);
+	$ratio = $newsz / $origsz unless $origsz == 0;
+    }
+
+    # Note that WriteInfo returns nonzero on success, zero on error
+    $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
+	die "PROBLEMS WRITING metadata to $tmp2file, halting\n";
+
+    unlink $tmp1file or warn "Could not remove TEMP file";
+
+    print sprintf(" ==> $tmp2file [saved %d%%]\n", (1 - $ratio) * 100);
+
+    # done, rename the original
+    rename $f, "$origdir/$f" or die "Could not rename original";
+}
+
+
+sub transcode_canon_sd {
+    print "Cannon SD camcorder MOV files\n";
+}
+
+#============================================================
+# MAIN ======================================================
+#============================================================
+
+
+
+sub main {
+    while ($_[0]) {
+        $_ = $_[0];
+
+        /^-?help$/  && do { return usage(); };
+	/^tagcat$/  && do { shift; return tagcat(@_); };
+	/^tagevent$/  && do { shift; return tagevent(@_); };
+	/^taginfo$/  && do { shift; return taginfo(@_); };
+	/^(tagmake|maketag)$/ && do { shift; return tagmake(@_); };
+
+	/^mv$/  && do { shift; return mv_file(@_); };
+	/^mvdir$/  && do { shift; return mv_filedir(@_); };
+	/^renum$/  && do { shift; return renum_files(@_); };
+	/^rename$/  && do { shift; return rename_exif(@_); };
+
+	/^fixtags$/  && do { shift; return fixtags_exif(@_); };
+	/^cvt$/  && do { shift; return convert_video(@_); };
+
+	print "unknown option $_\n";
+	return 1;
+    }
+}
+
+sub oldmain {
     return 0;
 }
 
