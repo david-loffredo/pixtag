@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 # 
 # PixScribe Photo Annotation Tools
-# Copyright (c) 2003-2017 by David Loffredo (dave@dave.org)
+# Copyright (c) 2003-2019 by David Loffredo (dave@dave.org)
 # All Rights Reserved
 #
 
@@ -12,6 +12,8 @@ use XML::LibXML::PrettyPrint;
 use strict;
 
 my $pkg_version = "0.2";
+my $ffmpeg = "ffmpeg -hide_banner -loglevel warning";
+my $nnedi_weights = 'C:/Dave/installed/ffmpeg/nnedi3_weights.bin';
 
 sub usage {
     print <<PERL_EOF;
@@ -46,9 +48,6 @@ PERL_EOF
     exit(0);
 }
 
-
-# check filename if mov, convert movie 
-# if mpg, convert mpeg2 and deinterlace
 # transfer tags from original in any case.
 # for original mpg files there are not many tags.  The File
 # Modification Date/Time needs to go to [XMP] Date/Time Original
@@ -56,36 +55,10 @@ PERL_EOF
 #[XMP]           Make                            : Canon
 #[XMP]           Camera Model Name               : Canon camera make
 
-# The MPEG-2 video came from a Canon FS100
-# The tape video came from a Sony Hi8 Handycam
-# Short AVIs came from a Canon PowerShot S200
-
 # this could be robust under renaming
 #[XMP]           Image Unique ID                 : c657795e9df2e3362ce15babbf0485
 #[XMP]           File Source                     : Digital Camera
 
-
-
-# Convert .mov file to mp4 using ffmpeg.  Copy over the exif tags to
-# XML-exif ones, and add new things if needed.  Assume that mov files
-# are from the canon camera.
-
-# -help		Print this usage message
-
-# -cvt		Convert video to MP4 
-# -rename		Rename file based on original date
-# -tag <inits>	Use inits when renaming the file
-
-# -import		Shorthand for -cvt -rename
-
-# -fixtags	Set creation date, make, model on MP4s
-# -setcam <type>	Set source camera tag if not set
-# -forcecam <type> As above, but force tag 
-# 		hi8 = Sony Hi8 Handycam (tapes)
-# 		fs100 = Canon FS100 (MPEG-2)
-# 		s200 = Canon S200 (AVIs)
-my $origdir = 'd:/temp/BACKUP';
-my %origfiles;
 my %knowncams = (
     'canon-elph110' => {
 	desc => 'Our 2012-2019 Canon camera (.mov)',
@@ -97,7 +70,7 @@ my %knowncams = (
 	desc => 'Our Canon early digital SD camcorder (MPEG-2)',
 	Make => 'Canon',
 	CameraModelName => 'Canon FS100',
-	cvtclass => \&transcode_canon_sd
+	cvtfn => \&transcode_canon_sd
     },
     'canon-s200' => {
 	desc => 'Our 2002-2012 Canon camera (.avi)',
@@ -117,7 +90,8 @@ my %knowncams = (
     'iphone-se' => {
 	desc => 'Dave iPhone (.mov)',
 	Make => 'Apple',
-	CameraModelName => 'iPhone SE'
+	CameraModelName => 'iPhone SE',
+	cvtfn => \&transcode_iphone_se
     },
     'kodak-c743' => {
 	desc => 'Dads Kodak Camera',
@@ -324,7 +298,7 @@ my %knowncams = (
 
 
 sub IsMediaFile {
-    return $_[0] =~ /\.(jpe?g|gif|png|bmp|mpg|mov|mp4|avi|wmv)$/i;
+    return $_[0] =~ /\.(jpe?g|gif|png|bmp|mpg|mov|mod|mp4|avi|wmv)$/i;
 }
 
 sub RenameMediaFiles {
@@ -480,6 +454,13 @@ sub SetCreateDate {
 	$datesource = 'QT::CreateDate (UTC)';
     }
 
+    # Old Canon MPG files do not have any data
+    my $moddate = $et_orig-> GetValue('FileModifyDate');
+    if ($moddate and not $createdate) {
+	$createdate = NormalizeDate($moddate);
+	$datesource = 'FileModifyDate';
+    }
+
     # Make the Create and Origdate consistent.  Do not worry about the
     # QuickTime CreateDate and ModifyDate fields because they are UTC
     # and are the time the video finishes.
@@ -494,40 +475,29 @@ sub SetCreateDate {
 sub SetMakeModel {
     my ($et, $et_orig, $opts, $f) = @_;
 
-    my ($maketag, $modeltag);
-    if (exists $opts->{findorig}) {
-	my $base = $f;
-	my $cam;
-	$base =~ s/\.[^\.]+//;
-	$cam = $origfiles{$base}->{src} if exists $origfiles{$base};
+    my $maketag = $opts->{Make};
+    my $modeltag = $opts->{CameraModelName};
 
-	$maketag = $knowncams{$cam}->{Make} if $cam;
-	$modeltag = $knowncams{$cam}->{CameraModelName} if $cam;
+    if (defined $opts->{forcecam})
+    {
+	$maketag = $knowncams{$opts->{forcecam}}->{Make};
+	$modeltag = $knowncams{$opts->{forcecam}}->{CameraModelName};
     }
-
+    
     # Look for motorola video
-    if ((not defined $maketag) and 
+    if ((not defined $modeltag) and 
 	($et_orig-> GetValue('CompressorName') eq 'MOTO'))
     {
-	$maketag = $knowncams{moto}->{Make};
-	$modeltag = $knowncams{moto}->{CameraModelName};
+	$maketag = $knowncams{'moto-g'}->{Make};
+	$modeltag = $knowncams{'moto-g'}->{CameraModelName};
     }
 
-    if ((not defined $maketag) and 
+    if ((not defined $modeltag) and 
 	($et_orig-> GetValue('Information') =~ /KODAK C743/))
     {
-	$maketag = $knowncams{c743}->{Make};
-	$modeltag = $knowncams{c743}->{CameraModelName};
+	$maketag = $knowncams{'kodak-c743'}->{Make};
+	$modeltag = $knowncams{'kodak-c743'}->{CameraModelName};
     }
-
-    # Fall through defaults 
-    $maketag = $opts->{Make} if 
-	((not defined $maketag) and (exists $opts->{Make}));
-
-    $modeltag = $opts->{CameraModelName} if 
-	((not defined $modeltag) and (exists $opts->{CameraModelName}));
-
-    
 
     my $numset = 0;
     if (defined $maketag and 
@@ -1210,12 +1180,6 @@ PERL_EOF
 	    $opts{setcam} = 1;
             next;
         };
-	/^-findorig$/ && do {
-	    # match original camera
-	    find(\&scanorig, $origdir);
-	    $opts{findorig} = 1;
-	    shift; next;
-	};
     }
 
     my @files;
@@ -1226,29 +1190,6 @@ PERL_EOF
 	/\.mp4$/ and $fixtags && fixtags_mp4($_, \%opts);
     }
 }
-
-
-sub scanorig {
-    # only look at real files
-    return if not -f;
-    return if /\.(jpg|bmp|mkv)$/;
-    return if $File::Find::name =~ /original_(createdate|movies)/;
-
-    my $base = $_;
-    $base =~ s/\.[^\.]+//;
-    $origfiles{$base} = { file=>$File::Find::name };
-    $origfiles{$base}->{src} = 's200' if /\.avi$/;
-    $origfiles{$base}->{src} = 's400' if /_jcl\.avi$/;
-    $origfiles{$base}->{src} = 'sd200' if /_rz\.avi$/;
-    $origfiles{$base}->{src} = 'fs100' if /\.mpg$/;
-    if (/_jz\.avi$/) {
-	$origfiles{$base}->{src} = 'sd200';
-	$origfiles{$base}->{src} = 'dsc2100' if /^2011/;
-    }
-    
-#    print "$base, src=$origfiles{$base}->{src}, $origfiles{$base}->{file}\n";
-}
-
 
 sub fixtags_mp4 {
     my ($f, $opts) = @_;
@@ -1292,7 +1233,7 @@ sub fixtags_mp4 {
     };
 
     # Make new MP4 container with the create date
-    my $cmd = "ffmpeg -hide_banner -loglevel warning -i $f  -c:v copy -c:a copy -movflags +faststart -metadata date=$createdate $tmpfile";
+    my $cmd = "$ffmpeg -i $f  -c:v copy -c:a copy -movflags +faststart -metadata date=$createdate $tmpfile";
     system ($cmd) == 0 or die "Problems in FFMPEG, halting";
 
     # Add the other XMP tags using exiftool
@@ -1431,7 +1372,7 @@ sub transcode_canon_elph110 {
     # Compress with a CRF of 16 which is basically original quality.
     # Always convert the audio to AAC.  No need for -map_metadata 0
     # because we are adding the tags afterwards.
-    my $cmd = "ffmpeg -hide_banner -loglevel warning -i $f -c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 -pix_fmt $pixfmt -movflags +faststart -c:a aac -b:a 160k -metadata date=$createdate $tmp1file";
+    my $cmd = "$ffmpeg -i $f -c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 -pix_fmt $pixfmt -movflags +faststart -c:a aac -b:a 160k -metadata date=$createdate $tmp1file";
     
     print "Converting $f\n";
     system ($cmd) == 0 or die "Problems in FFMPEG, halting";
@@ -1446,7 +1387,7 @@ sub transcode_canon_elph110 {
 	# even be larger.  If we get less than 5% saving, redo with
 	# compressed audio but the original video (no transcode)
 	#
-	$cmd = "ffmpeg -hide_banner -loglevel warning -i $f  -c:v copy -movflags +faststart -c:a aac -c:a aac -b:a 160k -metadata date=$createdate $tmp1file";
+	$cmd = "$ffmpeg -i $f  -c:v copy -movflags +faststart -c:a aac -c:a aac -b:a 160k -metadata date=$createdate $tmp1file";
 
 	print sprintf(" ==> minimal savings (%d%%), keeping original video\n", (1 - $ratio) * 100);
 
@@ -1471,8 +1412,164 @@ sub transcode_canon_elph110 {
 
 
 sub transcode_canon_sd {
-    print "Cannon SD camcorder MOV files\n";
+    # Canon FS100 SD digital camcorder.  Shoots interlaced MPEG-2
+    # video as .MOD files.
+    # Video: mpeg2video (Main), yuv420p(tv, top first), 720x480
+    #  [SAR 32:27 DAR 16:9], 29.97 fps, 29.97 tbr, 90k tbn, 59.94 tbc
+    # Audio: ac3, 48000 Hz, stereo, fltp, 256 kb/s
+
+    # Deinterlace using bwdif - Bob Weaver Deinterlacing Filter.
+    # Based on yadif/w3fdif, a bit slower but pretty produces nice
+    # results.  Also applying hqdn3d - the high precision/quality 3D
+    # denoise filter, which smooths out some of the interlace noise.
+
+    # Yadif was fast, but not very good.  Kerndeint - Donald Graft
+    # adaptive kernel deinterling was not noticably better than yadif.
+    # Tried nnedi but could not grok the syntax to pass a filename for
+    # the weights
+    my ($f, $opts) = @_;
+
+    print "$f\n";
+    my $origdir = 'original_files';
+    my $tmp1file = $f;    $tmp1file =~ s/\.mod$/_s1.mp4/i;
+    my $tmp2file = $f;    $tmp2file =~ s/\.mod$/.mp4/i;
+
+    die "Could not generate temp1 name for $f" if ($tmp1file eq $f);
+    die "Could not generate temp2 name for $f" if ($tmp2file eq $f);
+    
+    if (-f $tmp1file) { unlink $tmp1file or die "Could not remove $tmp1file"; }
+    if (-f $tmp2file) { unlink $tmp2file or die "Could not remove $tmp2file"; }
+    
+    if (not -d $origdir) {
+	mkdir $origdir or die "Could not create backup dir";
+    }
+    
+    my $et_orig = new Image::ExifTool;
+    $et_orig->ExtractInfo($f);
+
+    # Do not stomp on all of the quicktime data that is in there.
+    my $et = new Image::ExifTool;
+    $et->SetNewValuesFromFile($f);
+
+    # Check the creation date and camera info.  This sets the exiftool
+    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
+    $et-> SetNewValue('XMP-tiff:Make',$knowncams{'canon-fs100'}->{Make});
+    $et-> SetNewValue('XMP-tiff:Model',$knowncams{'canon-fs100'}->{CameraModelName});
+
+    my $cmd = "ffmpeg -i $f ".
+	'-vf "bwdif,hqdn3d" '.
+	'-c:v libx264 -preset slower -crf 18 -profile:v high -level 4.1 '.
+	'-pix_fmt yuv420p -movflags +faststart '.
+	'-c:a aac -b:a 160k '.
+	"-metadata date=$createdate $tmp1file";
+
+    print "Converting $f\n";
+    system ($cmd) == 0 or die "Problems in FFMPEG, halting";
+
+    #DateTimeOriginal, CreateDate and ModifyDate
+
+    # Note that WriteInfo returns nonzero on success, zero on error
+    $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
+	die "PROBLEMS WRITING metadata to $tmp2file, halting\n";
+
+    unlink $tmp1file or warn "Could not remove TEMP file";
+    print " ==> $tmp2file\n";
+
+    # done, rename the original
+    rename $f, "$origdir/$f" or die "Could not rename original";
 }
+
+
+sub transcode_iphone_se {
+    # iPhone SE video is H.264 video with aac audio in a .mov
+    # container.  Normal video is 30fps, but the slow motion video is
+    # shot at 240fps and played at varying speed by the phone.
+    my ($f, $opts) = @_;
+
+    print "$f\n";
+    my $origdir = 'original_files';
+    my $tmp1file = $f;    $tmp1file =~ s/\.mov$/_s1.mp4/i;
+    my $tmp2file = $f;    $tmp2file =~ s/\.mov$/.mp4/i;
+
+    die "Could not generate temp1 name for $f" if ($tmp1file eq $f);
+    die "Could not generate temp2 name for $f" if ($tmp2file eq $f);
+    
+    if (-f $tmp1file) { unlink $tmp1file or die "Could not remove $tmp1file"; }
+    if (-f $tmp2file) { unlink $tmp2file or die "Could not remove $tmp2file"; }
+    
+    if (not -d $origdir) {
+	mkdir $origdir or die "Could not create backup dir";
+    }
+    
+    my $et_orig = new Image::ExifTool;
+    $et_orig->ExtractInfo($f);
+
+    # Do not stomp on all of the quicktime data that is in there.
+    my $et = new Image::ExifTool;
+    $et->SetNewValuesFromFile($f);
+
+    # Check the creation date and camera info.  This sets the exiftool
+    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
+    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
+
+    # $et-> GetNewValue('XMP-tiff:Model') =~ /iPhone SE/;
+
+    if ($et_orig-> GetValue('VideoFrameRate') > 200) {
+	# Is H264 but with 240fps frame rate.  In order to actually
+	# see the slow motion, convert to 30fps and strech the audio.
+	# Unfortunately, ffmpeg does a crap job of streching audio so
+	# we export, use the rubberband program and then reintegrate.
+
+        print "HIGH SPEED VIDEO - slowing to 30fps and streching audio\n";
+	my $wavorig = $f;    $wavorig =~ s/\.mov$/_orig.wav/i;
+	my $wavslow = $f;    $wavslow =~ s/\.mov$/_slow.wav/i;
+
+	# ffmpeg -i my_video.mp4 output_audio.wav
+	system ("$ffmpeg -i $f  $wavorig") == 0 or 
+	    die "Problems extracting audio, halting";
+
+	# rubberband -t8 keeps the same pitch and sounds like poltergeist
+	# rubberband -t8 -f0.125  makes everything lower
+
+	system ("rubberband -q -t8 -f0.125 $wavorig $wavslow") == 0 or 
+	    die "Problems streching audio, need rubberband\n".
+	    "see https://breakfastquay.com/rubberband/\n";
+
+	# "setpts=8.0*PTS" slows video, merge with slowed audio
+	my $cmd = "$ffmpeg -i $f -i $wavslow ". 
+	    '-filter:v "setpts=8.0*PTS" -r 30 -crf 16 '.
+	    '-map 0:v:0 -map 1:a:0 -c:a aac -b:a 96k '.
+	    "-metadata date=$createdate $tmp1file";
+
+	print "Converting $f\n";
+	system ($cmd) == 0 or die "Problems in FFMPEG, halting";
+
+	unlink $wavorig or warn "Could not remove TEMP file";
+	unlink $wavslow or warn "Could not remove TEMP file";
+    }
+    else {
+	# Everything is already H264 with reasonable parameters. Do
+	# not transcode anything, just move from a quicktime to MP4
+	# container.
+
+	my $cmd = "$ffmpeg -i $f -vcodec copy -acodec copy ".
+	    "-metadata date=$createdate $tmp1file";
+
+	print "Converting $f\n";
+	system ($cmd) == 0 or die "Problems in FFMPEG, halting";
+    }
+
+    # Note that WriteInfo returns nonzero on success, zero on error
+    $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
+	die "PROBLEMS WRITING metadata to $tmp2file, halting\n";
+
+    unlink $tmp1file or warn "Could not remove TEMP file";
+    print " ==> $tmp2file\n";
+
+    # done, rename the original
+    rename $f, "$origdir/$f" or die "Could not rename original";
+}
+
 
 #============================================================
 # MAIN ======================================================

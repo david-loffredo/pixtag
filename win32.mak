@@ -1,6 +1,6 @@
 # 
 # PixScribe Photo Annotation Tools
-# Copyright (c) 2003-2017 by David Loffredo (dave@dave.org)
+# Copyright (c) 2003-2019 by David Loffredo (dave@dave.org)
 # All Rights Reserved
 #
 
