@@ -2,11 +2,15 @@
 == PixScribe Photo Annotation Tools
 ==
 
-Changes in release 0.2 (in progress)
+Changes in release 0.2 (2019-09-02)
 
 * Adding convert action to pix.pl to curate all of the odd video
   formats into a common mp4 base.  Merged the cvtvid.pl script with
-  code for handling cannon elph movs with ffmpeg.
+  code for handling videos ffmpeg.   Conversions for:
+
+	Cannon ELPH
+	Cannon FS100
+	iPhone SE with slow-motion video.
 
 * First update in about nine years.  Picture naming convention has
   held up very well over the past 15 years and the pixtag description

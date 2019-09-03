@@ -1455,8 +1455,15 @@ sub transcode_canon_sd {
     my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
     $et-> SetNewValue('XMP-tiff:Make',$knowncams{'canon-fs100'}->{Make});
     $et-> SetNewValue('XMP-tiff:Model',$knowncams{'canon-fs100'}->{CameraModelName});
+    $et-> SetNewValue('XMP:DateTimeOriginal',$createdate);
+    $et-> SetNewValue('XMP:CreateDate',$createdate);
+    $et-> SetNewValue('XMP:ModifyDate',$createdate);
+    $et-> SetNewValue('MediaCreateDate',$createdate);
+    $et-> SetNewValue('MediaModifyDate',$createdate);
+    $et-> SetNewValue('TrackCreateDate',$createdate);
+    $et-> SetNewValue('TrackModifyDate',$createdate);
 
-    my $cmd = "ffmpeg -i $f ".
+    my $cmd = "$ffmpeg -i $f ".
 	'-vf "bwdif,hqdn3d" '.
 	'-c:v libx264 -preset slower -crf 18 -profile:v high -level 4.1 '.
 	'-pix_fmt yuv420p -movflags +faststart '.
@@ -1466,7 +1473,6 @@ sub transcode_canon_sd {
     print "Converting $f\n";
     system ($cmd) == 0 or die "Problems in FFMPEG, halting";
 
-    #DateTimeOriginal, CreateDate and ModifyDate
 
     # Note that WriteInfo returns nonzero on success, zero on error
     $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
