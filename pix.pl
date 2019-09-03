@@ -1420,8 +1420,9 @@ sub transcode_canon_sd {
 
     # Deinterlace using bwdif - Bob Weaver Deinterlacing Filter.
     # Based on yadif/w3fdif, a bit slower but pretty produces nice
-    # results.  Also applying hqdn3d - the high precision/quality 3D
-    # denoise filter, which smooths out some of the interlace noise.
+    # results.  Denoise with vaguedenoiser, which does a nice job.  I
+    # originally tried hqdn3d, but that produced some artifacts on
+    # really noisy low light video.
 
     # Yadif was fast, but not very good.  Kerndeint - Donald Graft
     # adaptive kernel deinterling was not noticably better than yadif.
@@ -1431,8 +1432,8 @@ sub transcode_canon_sd {
 
     print "$f\n";
     my $origdir = 'original_files';
-    my $tmp1file = $f;    $tmp1file =~ s/\.mod$/_s1.mp4/i;
-    my $tmp2file = $f;    $tmp2file =~ s/\.mod$/.mp4/i;
+    my $tmp1file = $f;    $tmp1file =~ s/\.(mod|mpg)$/_s1.mp4/i;
+    my $tmp2file = $f;    $tmp2file =~ s/\.(mod|mpg)$/.mp4/i;
 
     die "Could not generate temp1 name for $f" if ($tmp1file eq $f);
     die "Could not generate temp2 name for $f" if ($tmp2file eq $f);
@@ -1464,8 +1465,8 @@ sub transcode_canon_sd {
     $et-> SetNewValue('TrackModifyDate',$createdate);
 
     my $cmd = "$ffmpeg -i $f ".
-	'-vf "bwdif,hqdn3d" '.
-	'-c:v libx264 -preset slower -crf 18 -profile:v high -level 4.1 '.
+	'-vf "bwdif,vaguedenoiser" '.
+	'-c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 '.
 	'-pix_fmt yuv420p -movflags +faststart '.
 	'-c:a aac -b:a 160k '.
 	"-metadata date=$createdate $tmp1file";
