@@ -13,7 +13,6 @@ use strict;
 
 my $pkg_version = "0.2";
 my $ffmpeg = "ffmpeg -hide_banner -loglevel warning";
-my $nnedi_weights = 'C:/Dave/installed/ffmpeg/nnedi3_weights.bin';
 
 sub usage {
     print <<PERL_EOF;
@@ -39,7 +38,7 @@ information, like \"pix tagmake -help\"
  rename		Rename to canonical date format based on exif data. 
 
  cvt		Convert video to normal form
- fixtags	Normalize the EXIF tags in a video
+ setdate	Set the date tags in MP4 video
 
 STILL UNDER DEVELOPMENT
  rotate		Automatically rotate and strip orientation tags (needs jhead)
@@ -48,80 +47,70 @@ PERL_EOF
     exit(0);
 }
 
-# transfer tags from original in any case.
-# for original mpg files there are not many tags.  The File
-# Modification Date/Time needs to go to [XMP] Date/Time Original
-# Also manually set 
-#[XMP]           Make                            : Canon
-#[XMP]           Camera Model Name               : Canon camera make
 
-# this could be robust under renaming
-#[XMP]           Image Unique ID                 : c657795e9df2e3362ce15babbf0485
-#[XMP]           File Source                     : Digital Camera
-
-my %knowncams = (
+my %camdefs = (
     'canon-elph110' => {
 	desc => 'Our 2012-2019 Canon camera (.mov)',
 	Make => 'Canon',
-	CameraModelName => 'Canon PowerShot ELPH110',
+	Model => 'Canon PowerShot ELPH110',
 	cvtfn => \&transcode_canon_elph110
     },
     'canon-fs100' => {
 	desc => 'Our Canon early digital SD camcorder (MPEG-2)',
 	Make => 'Canon',
-	CameraModelName => 'Canon FS100',
+	Model => 'Canon FS100',
 	cvtfn => \&transcode_canon_sd
     },
     'canon-s200' => {
 	desc => 'Our 2002-2012 Canon camera (.avi)',
 	Make => 'Canon',
-	CameraModelName => 'Canon PowerShot S200'
+	Model => 'Canon PowerShot S200'
     },
     'canon-s400' => {
 	desc => 'Dads original Canon digital camera (.avi)',
 	Make => 'Canon',
-	CameraModelName => 'Canon PowerShot S400'
+	Model => 'Canon PowerShot S400'
     },
     'canon-sd200' => {
 	desc => 'Rudy/Judy original Canon digital camera (.avi)',
 	Make => 'Canon',
-	CameraModelName => 'Canon PowerShot SD200'
+	Model => 'Canon PowerShot SD200'
     },
     'iphone-se' => {
 	desc => 'Dave iPhone (.mov)',
 	Make => 'Apple',
-	CameraModelName => 'iPhone SE',
+	Model => 'iPhone SE',
 	cvtfn => \&transcode_iphone_se
     },
     'kodak-c743' => {
 	desc => 'Dads Kodak Camera',
 	Make => 'Eastman Kodak Company',
-	CameraModelName => 'Kodak C743 Zoom Digital Camera'
+	Model => 'Kodak C743 Zoom Digital Camera'
     },
     'moto-g6' => {
 	desc => 'Krista/Emma Motorola Phone',
 	Make => 'Motorola',
-	CameraModelName => 'Motorola Moto G6 Play XT1922'
+	Model => 'Motorola Moto G6 Play XT1922'
     },
     'moto-g' => {
 	desc => 'Kristas Motorola Phone',
 	Make => 'Motorola',
-	CameraModelName => 'Motorola Moto G XT1031'
+	Model => 'Motorola Moto G XT1031'
     },
     'sony-dsc2100' => {
 	desc => 'Judy new sony camera',
 	Make => 'Sony',
-	CameraModelName => 'Sony DSC-S2100'
+	Model => 'Sony DSC-S2100'
     },
     'sony-hi8' => {
 	desc => 'Sony 8mm camcorder (tapes)',
 	Make => 'Sony',
-	CameraModelName => 'Sony Hi8 Handycam'
+	Model => 'Sony Hi8 Handycam'
     },
     vtech => {
 	desc => 'Kids Play Camera',
 	Make => 'VTech',
-	CameraModelName => 'VTech Kidizoom Digital Camera'
+	Model => 'VTech Kidizoom Digital Camera'
     },
     );
 
@@ -465,38 +454,69 @@ sub SetCreateDate {
     # QuickTime CreateDate and ModifyDate fields because they are UTC
     # and are the time the video finishes.
     if ($createdate ne $origdate) {
-	print " ==> set DateTimeOriginal\n";
+	print " ==> set DateTimeOriginal ($datesource)\n";
 	$et-> SetNewValue('XMP:DateTimeOriginal',$createdate);
     }
 
     return ($createdate, $datesource);
 }
 
+
+sub SetVideoDates {
+    my ($et, $createdate, $datesrc) = @_;
+    $et-> SetNewValue('XMP:DateTimeOriginal',$createdate);
+    $et-> SetNewValue('XMP:CreateDate',$createdate);
+    $et-> SetNewValue('XMP:ModifyDate',$createdate);
+    $et-> SetNewValue('XMP:DateAcquired',$createdate);
+    $et-> SetNewValue('MediaCreateDate',$createdate);
+    $et-> SetNewValue('MediaModifyDate',$createdate);
+    $et-> SetNewValue('TrackCreateDate',$createdate);
+    $et-> SetNewValue('TrackModifyDate',$createdate);
+
+    # FileModifyDate
+    print " ==> Create Date: $createdate ($datesrc)\n";
+}
+sub SetVideoMake {
+    my ($et, $make) = @_;
+    if (defined $make) {
+	$et-> SetNewValue('XMP-tiff:Make',$make);
+	print " ==> Make: $make\n";
+    }
+}
+sub SetVideoModel {
+    my ($et, $model) = @_;
+    if (defined $model) {
+	$et-> SetNewValue('XMP-tiff:Model',$model);
+	print " ==> Model: $model\n";
+    }
+}
+
+
 sub SetMakeModel {
     my ($et, $et_orig, $opts, $f) = @_;
 
     my $maketag = $opts->{Make};
-    my $modeltag = $opts->{CameraModelName};
+    my $modeltag = $opts->{Model};
 
     if (defined $opts->{forcecam})
     {
-	$maketag = $knowncams{$opts->{forcecam}}->{Make};
-	$modeltag = $knowncams{$opts->{forcecam}}->{CameraModelName};
+	$maketag = $camdefs{$opts->{forcecam}}->{Make};
+	$modeltag = $camdefs{$opts->{forcecam}}->{Model};
     }
     
     # Look for motorola video
     if ((not defined $modeltag) and 
 	($et_orig-> GetValue('CompressorName') eq 'MOTO'))
     {
-	$maketag = $knowncams{'moto-g'}->{Make};
-	$modeltag = $knowncams{'moto-g'}->{CameraModelName};
+	$maketag = $camdefs{'moto-g'}->{Make};
+	$modeltag = $camdefs{'moto-g'}->{Model};
     }
 
     if ((not defined $modeltag) and 
 	($et_orig-> GetValue('Information') =~ /KODAK C743/))
     {
-	$maketag = $knowncams{'kodak-c743'}->{Make};
-	$modeltag = $knowncams{'kodak-c743'}->{CameraModelName};
+	$maketag = $camdefs{'kodak-c743'}->{Make};
+	$modeltag = $camdefs{'kodak-c743'}->{Model};
     }
 
     my $numset = 0;
@@ -510,7 +530,7 @@ sub SetMakeModel {
     if (defined $modeltag and
 	($opts->{forcecam} or not $et-> GetNewValue('XMP-tiff:Model')))
     {
-    	print " ==> set CameraModelName = $modeltag\n";
+    	print " ==> set Model = $modeltag\n";
 	$et-> SetNewValue('XMP-tiff:Model',$modeltag);
 	$numset++;
     }
@@ -1127,59 +1147,54 @@ PERL_EOF
 #============================================================
 # FIX EXIF TAGS
 #============================================================
-sub fixtags_exif {
+sub setdate_tags {
     my $usage = <<PERL_EOF;
-Usage: pix fixtags [options] <files>
+Usage: pix setdate [options] <mp4files>
 
-Fix exif tags in image or video files.
+Change embedded creation dates in an MP4 file.  By default, this takes
+the date from the filename.
 
 Options are:
 
  -help           - print this help message.
 
- -n		 - Print what would change but do not move.
- -o <file>       - Save the updated pixtag file as <file>.  By default 
-		   results are saved to the same file if there is only 
-		   one input or otherwise output goes to NEWTAGS.pixtag.
+ -cam <name>	 - set camera make/model tags to predefined value.  See 
+		   cvt for valid camera names.
+ -make <val>	 - set make tag to given string.
+ -model <val>	 - set model tag to given string.
 
- -tags <file>	 - Read existing descriptions from <file>. By default 
-		   reads all .pixtag files in the directory.  This may
-		   be specified multiple times.
-
- -usr <inits>	 - Trailing User ID for new filenames.   Default 'dtl'.
-		   Will preserve existing IDs on files.
 PERL_EOF
 ;
     my %opts = (tag=>'dtl', rename=>0);
     my @files;
-    my $fixtags = 0;
 
     while ($_[0]) {
         $_ = $_[0];
 
-	/^-(set|force)cam$/ && do {
-            shift; $fixtags = 1;
-	    $opts{forcecam} = 1 if $1 eq 'force';
-
+	/^-cam$/ && do {
+            shift; 
 	    my $cam = shift;
-	    # look up shorthands
-	    if (exists $knowncams{$cam}) {
-		print "Setting camera to $knowncams{$cam}->{desc}\n";
-		$opts{Make} = $knowncams{$cam}->{Make};
-		$opts{CameraModelName} = $knowncams{$cam}->{CameraModelName};
+	    if (exists $camdefs{$cam}) {
+		print "Setting camera to $camdefs{$cam}->{desc}\n";
+		$opts{make} = $camdefs{$cam}->{Make};
+		$opts{model} = $camdefs{$cam}->{Model};
 	    }
 	    else {
-		$opts{CameraModelName} = $cam;
+		die "unknown camera $cam";
 	    }
             next;
         };
-
-	/^-setmake$/ && do {
-            shift; $fixtags = 1;
-	    $opts{Make} = shift;
-	    $opts{setcam} = 1;
+	/^-make$/ && do {
+            shift; 
+	    $opts{make} = shift;
             next;
         };
+	/^-model$/ && do {
+            shift; 
+	    $opts{model} = shift;
+            next;
+        };
+	last;
     }
 
     my @files;
@@ -1187,64 +1202,62 @@ PERL_EOF
     for my $arg (@_) { push @files, (sort glob $arg); }
 
     for my $f (@files) {
-	/\.mp4$/ and $fixtags && fixtags_mp4($_, \%opts);
+	setdate_mp4($f, \%opts);
     }
 }
 
-sub fixtags_mp4 {
+sub setdate_mp4 {
     my ($f, $opts) = @_;
-    my $tmpfile = 'TEMP.mp4';
-    my $newfile = 'NEWFILE.mp4';
-    my $origdir = 'original_createdate';
 
-    if (-f $tmpfile) {
-	unlink $tmpfile or die "Could not remove TEMP file";
-    }
+    print "$f\n";
+    my $origdir = 'original_dates';
+    my $tmp1file = $f;    $tmp1file =~ s/\.mp4$/_s1.mp4/i;
+    my $tmp2file = $f;    $tmp2file =~ s/\.mp4$/_s2.mp4/i;
+
+    die "Could not generate temp1 name for $f" if ($tmp1file eq $f);
+    die "Could not generate temp2 name for $f" if ($tmp2file eq $f);
     
+    if (-f $tmp1file) { unlink $tmp1file or die "Could not remove $tmp1file"; }
+    if (-f $tmp2file) { unlink $tmp2file or die "Could not remove $tmp2file"; }
     if (not -d $origdir) {
 	mkdir $origdir or die "Could not create backup dir";
     }
-
-    print "$f\n";
     
     my $et_orig = new Image::ExifTool;
     $et_orig->ExtractInfo($f);
 
-    my $et = new Image::ExifTool;
-    my $datesource;
-
     # Do not stomp on all of the quicktime data that is in there.
+    my $et = new Image::ExifTool;
     $et->SetNewValuesFromFile($f);
-    
-    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
-    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
 
-    if ($tagcount == 0 and $datesrc eq 'ContentCreateDate') {
-	print " ==> has ContentCreateDate, SKIPPING\n";
+    # Check the creation date and camera info.  This sets the exiftool
+    my ($createdate, $datesrc);
+    $createdate = "${1}-${2}-${3}T${4}:${5}:${6}" if 
+	    $f =~ /(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)/;
+	
+    $datesrc = 'filename' if $createdate;
+    if (not $createdate) {
+	print " ==> no date found, skipping\n";
 	return;
     }
-    die "COULD NOT GET CREATE DATE" if not $createdate;
 
-    print " ==> date $createdate from $datesrc\n";
-    print " ==> set ContentCreateDate\n";
+    SetVideoDates($et, $createdate, $datesrc);
+    SetVideoMake($et, $opts->{make});
+    SetVideoMake($et, $opts->{model});
 
-    -f $newfile && do {
-	unlink $tmpfile or die "Could not remove NEWFILE file";
-    };
-
-    # Make new MP4 container with the create date
-    my $cmd = "$ffmpeg -i $f  -c:v copy -c:a copy -movflags +faststart -metadata date=$createdate $tmpfile";
+    # Make new MP4 container with ContentCreateDate
+    my $cmd = "$ffmpeg -i $f  -c:v copy -c:a copy -movflags +faststart -metadata date=$createdate $tmp1file";
     system ($cmd) == 0 or die "Problems in FFMPEG, halting";
 
-    # Add the other XMP tags using exiftool
     # Note that WriteInfo returns nonzero on success, zero on error
-    $et->WriteInfo($tmpfile, $newfile) == 0 and 
-	die "PROBLEMS WRITING metadata to $newfile, halting\n";
+    $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
+	die "PROBLEMS WRITING metadata to $tmp2file, halting\n";
 
+    unlink $tmp1file or warn "Could not remove TEMP file";
+
+    # done, rename the original
     rename $f, "$origdir/$f" or die "Could not rename original";
-    rename $newfile, $f or die "Could not rename replacement file";
-
-    unlink $tmpfile or warn "Could not remove TEMP file";
+    rename $tmp2file, $f or die "Could not rename $tmp2file";
 }
 
 
@@ -1273,9 +1286,9 @@ PERL_EOF
 
         /^-?help$/  && do { 
 	    print $usage; 
-	    print "Known camera sources:\n\n";
-	    foreach my $n (sort keys %knowncams) {
-		print "  $n\t$knowncams{$n}->{desc}\n";
+	    print "Known cameras:\n\n";
+	    foreach my $n (sort keys %camdefs) {
+		print "  $n\n\t$camdefs{$n}->{Model}, $camdefs{$n}->{desc}\n";
 	    }
 	    return 0; 
 
@@ -1286,22 +1299,24 @@ PERL_EOF
     }
 
     my $srctype = shift;
-    die "Unknown source type $srctype" if not exists $knowncams{$srctype}; 
+    die "Unknown source type $srctype" if not exists $camdefs{$srctype}; 
+    $opts{make} = $camdefs{$srctype}->{Make};
+    $opts{model} = $camdefs{$srctype}->{Model};
 
     my @files;
     my (%src, %dst);
     for my $arg (@_) { push @files, (sort glob $arg); }
 
-    if (exists $knowncams{$srctype}->{cvtfn}) {
-	my $cvtfn = $knowncams{$srctype}->{cvtfn};
+    if (exists $camdefs{$srctype}->{cvtfn}) {
+	my $cvtfn = $camdefs{$srctype}->{cvtfn};
 	for my $f (@files) {
 	    $cvtfn->($f, \%opts);
 	}
 	return 0;
     }
 
-    if (exists $knowncams{$srctype}->{cvtclass}) {
-	$knowncams{$srctype}->{cvtclass}->(\@files, \%opts);
+    if (exists $camdefs{$srctype}->{cvtclass}) {
+	$camdefs{$srctype}->{cvtclass}->(\@files, \%opts);
 	return 0;
     }
 
@@ -1454,15 +1469,10 @@ sub transcode_canon_sd {
 
     # Check the creation date and camera info.  This sets the exiftool
     my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
-    $et-> SetNewValue('XMP-tiff:Make',$knowncams{'canon-fs100'}->{Make});
-    $et-> SetNewValue('XMP-tiff:Model',$knowncams{'canon-fs100'}->{CameraModelName});
-    $et-> SetNewValue('XMP:DateTimeOriginal',$createdate);
-    $et-> SetNewValue('XMP:CreateDate',$createdate);
-    $et-> SetNewValue('XMP:ModifyDate',$createdate);
-    $et-> SetNewValue('MediaCreateDate',$createdate);
-    $et-> SetNewValue('MediaModifyDate',$createdate);
-    $et-> SetNewValue('TrackCreateDate',$createdate);
-    $et-> SetNewValue('TrackModifyDate',$createdate);
+
+    SetVideoDates($et, $createdate, $datesrc);
+    SetVideoMake($et, $opts->{make});
+    SetVideoMake($et, $opts->{model});
 
     my $cmd = "$ffmpeg -i $f ".
 	'-vf "bwdif,vaguedenoiser" '.
@@ -1599,19 +1609,13 @@ sub main {
 	/^renum$/  && do { shift; return renum_files(@_); };
 	/^rename$/  && do { shift; return rename_exif(@_); };
 
-	/^fixtags$/  && do { shift; return fixtags_exif(@_); };
+	/^setdate$/  && do { shift; return setdate_tags(@_); };
 	/^cvt$/  && do { shift; return convert_video(@_); };
 
 	print "unknown option $_\n";
 	return 1;
     }
 }
-
-sub oldmain {
-    return 0;
-}
-
-
 
 exit main(@ARGV);
 
