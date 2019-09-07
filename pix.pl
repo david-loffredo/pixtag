@@ -41,7 +41,7 @@ information, like \"pix tagmake -help\"
  rename		Rename to canonical date format based on exif data. 
 
  cvt		Convert video to normal form
- setdate	Set the date tags in MP4 video
+ setdate	Set the date tags in JPG or MP4 video
 
 STILL UNDER DEVELOPMENT
  rotate		Automatically rotate and strip orientation tags (needs jhead)
@@ -67,17 +67,20 @@ my %camdefs = (
     'canon-s200' => {
 	desc => 'Our 2002-2012 Canon camera (.avi)',
 	Make => 'Canon',
-	Model => 'Canon PowerShot S200'
+	Model => 'Canon PowerShot S200',
+	cvtfn => \&transcode_canon_avi
     },
     'canon-s400' => {
 	desc => 'Dads original Canon digital camera (.avi)',
 	Make => 'Canon',
-	Model => 'Canon PowerShot S400'
+	Model => 'Canon PowerShot S400',
+	cvtfn => \&transcode_canon_avi
     },
     'canon-sd200' => {
 	desc => 'Rudy/Judy original Canon digital camera (.avi)',
 	Make => 'Canon',
-	Model => 'Canon PowerShot SD200'
+	Model => 'Canon PowerShot SD200',
+	cvtfn => \&transcode_canon_avi
     },
     'iphone-se' => {
 	desc => 'Dave iPhone (.mov)',
@@ -466,6 +469,16 @@ sub SetCreateDate {
     return ($createdate, $datesource);
 }
 
+sub SetPictureDates {
+    my ($et, $createdate, $datesrc) = @_;
+    $et-> SetNewValue('EXIF:DateTimeOriginal',$createdate);
+    $et-> SetNewValue('EXIF:CreateDate',$createdate);
+    $et-> SetNewValue('EXIF:ModifyDate',$createdate);
+    $et-> SetNewValue('XMP:DateAcquired',$createdate);
+    $et-> SetNewValue('XMP:DateTimeOriginal',$createdate);
+
+    print " ==> Create Date: $createdate ($datesrc)\n";
+}
 
 sub SetVideoDates {
     my ($et, $createdate, $datesrc) = @_;
@@ -478,7 +491,7 @@ sub SetVideoDates {
     $et-> SetNewValue('TrackCreateDate',$createdate);
     $et-> SetNewValue('TrackModifyDate',$createdate);
 
-    # FileModifyDate
+    # FileModifyDate does not really work
     print " ==> Create Date: $createdate ($datesrc)\n";
 }
 sub SetVideoMake {
@@ -497,7 +510,7 @@ sub SetVideoModel {
 }
 
 
-sub MakeTemp {
+sub MakeTempFile {
     my ($f, $ext) = @_;
     my $tmp = $f;
     $tmp =~ s/\.[^\.]+$/$ext/;
@@ -1167,8 +1180,8 @@ sub setdate_tags {
     my $usage = <<PERL_EOF;
 Usage: pix setdate [options] <mp4files>
 
-Change embedded creation dates in an MP4 file.  By default, this takes
-the date from the filename.
+Change embedded creation dates in a JPG or MP4 file.  By default, this
+takes the date from the filename.
 
 Options are:
 
@@ -1218,7 +1231,12 @@ PERL_EOF
     for my $arg (@_) { push @files, (sort glob $arg); }
 
     for my $f (@files) {
-	setdate_mp4($f, \%opts);
+	if ($f =~ /\.jpg$/i) {
+	    setdate_jpg($f, \%opts);
+	}
+	else {
+	    setdate_mp4($f, \%opts);
+	}
     }
 }
 
@@ -1274,6 +1292,29 @@ sub setdate_mp4 {
     # done, rename the original
     rename $f, "$origdir/$f" or die "Could not rename original";
     rename $tmp2file, $f or die "Could not rename $tmp2file";
+}
+
+sub setdate_jpg {
+    my ($f, $opts) = @_;
+    print "$f\n";
+
+    # Check the creation date and camera info.  This sets the exiftool
+    my ($createdate, $datesrc);
+    $createdate = "${1}-${2}-${3}T${4}:${5}:${6}" if 
+	    $f =~ /(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)/;
+	
+    $datesrc = 'filename' if $createdate;
+    if (not $createdate) {
+	print " ==> no date found, skipping\n";
+	return;
+    }
+
+    my $et = new Image::ExifTool;
+    SetPictureDates($et, $createdate, $datesrc);
+
+    # Note that WriteInfo returns nonzero on success, zero on error
+    $et->WriteInfo($f) == 0 and 
+	die "PROBLEMS WRITING metadata to $f, halting\n";
 }
 
 
@@ -1500,6 +1541,68 @@ sub transcode_canon_sd {
     print " ==> convert mpeg2, deinterlace\n";
     system ($cmd) == 0 or die "Problems in FFMPEG, halting";
 
+
+    # Note that WriteInfo returns nonzero on success, zero on error
+    $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
+	die "PROBLEMS WRITING metadata to $tmp2file, halting\n";
+
+    unlink $tmp1file or warn "Could not remove TEMP file";
+
+    # done, rename the original
+    rename $f, "$origdir/$f" or die "Could not rename original";
+}
+
+
+
+sub transcode_canon_avi {
+    # Early Canon Powershot cameras make MJPG AVIs.  The early ones
+    # use slow frame rates (15/20) at 320x240.  Later versions will
+    # shoot VGA at 30fps.
+
+    # Scale up to VGA, do motion interpolation to 60fps, some light
+    # sharpening, then denoise with vaguedenoiser.
+    my ($f, $opts) = @_;
+
+    print "$f\n";
+    my $origdir = 'original_files';
+    my $tmp1file = $f;    $tmp1file =~ s/\.avi$/_s1.mp4/i;
+    my $tmp2file = $f;    $tmp2file =~ s/\.avi$/.mp4/i;
+
+    die "Could not generate temp1 name for $f" if ($tmp1file eq $f);
+    die "Could not generate temp2 name for $f" if ($tmp2file eq $f);
+    
+    if (-f $tmp1file) { unlink $tmp1file or die "Could not remove $tmp1file"; }
+    if (-f $tmp2file) { unlink $tmp2file or die "Could not remove $tmp2file"; }
+    
+    if (not -d $origdir) {
+	mkdir $origdir or die "Could not create backup dir";
+    }
+    
+    my $et_orig = new Image::ExifTool;
+    $et_orig->ExtractInfo($f);
+
+    # Do not stomp on all of the quicktime data that is in there.
+    my $et = new Image::ExifTool;
+    $et->SetNewValuesFromFile($f);
+
+    # Check the creation date and camera info.  This sets the exiftool
+    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
+
+    SetVideoDates($et, $createdate, $datesrc);
+    SetVideoMake($et, $opts->{make});
+    SetVideoMake($et, $opts->{model});
+
+    my $cmd = "$ffmpeg -i $f ".
+	'-vf "scale=640:480:flags=lanczos,'.
+	'minterpolate=\'mi_mode=mci:mc_mode=aobmc:vsbmc=1\','.
+	'smartblur=1.5:-0.35:-3.5:0.65:0.25:2.0,vaguedenoiser" '.
+	'-c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 '.
+	'-pix_fmt yuv420p -movflags +faststart '.
+	'-c:a aac -b:a 160k '.
+	"-metadata date=$createdate $tmp1file";
+
+    print " ==> convert mjpg, scale, motion interpolate\n";
+    system ($cmd) == 0 or die "Problems in FFMPEG, halting";
 
     # Note that WriteInfo returns nonzero on success, zero on error
     $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
