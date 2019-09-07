@@ -5,6 +5,9 @@
 # All Rights Reserved
 #
 
+# ffmpeg uses mp4 v1 containers, to use the newer one do -brand mp42
+
+
 use File::Find;
 use Image::ExifTool qw(:Public);
 use XML::LibXML;
@@ -450,6 +453,8 @@ sub SetCreateDate {
 	$datesource = 'FileModifyDate';
     }
 
+
+    # MOVE THIS OUT INTO SET VIDEO DATES
     # Make the Create and Origdate consistent.  Do not worry about the
     # QuickTime CreateDate and ModifyDate fields because they are UTC
     # and are the time the video finishes.
@@ -490,6 +495,17 @@ sub SetVideoModel {
 	print " ==> Model: $model\n";
     }
 }
+
+
+sub MakeTemp {
+    my ($f, $ext) = @_;
+    my $tmp = $f;
+    $tmp =~ s/\.[^\.]+$/$ext/;
+    die "Could not generate temp $ext name for $f" if ($tmp eq $f);
+    if (-f $tmp) { unlink $tmp or die "Could not remove $tmp"; }
+    return $tmp;
+}
+
 
 
 sub SetMakeModel {
@@ -1447,8 +1463,8 @@ sub transcode_canon_sd {
 
     print "$f\n";
     my $origdir = 'original_files';
-    my $tmp1file = $f;    $tmp1file =~ s/\.(mod|mpg)$/_s1.mp4/i;
-    my $tmp2file = $f;    $tmp2file =~ s/\.(mod|mpg)$/.mp4/i;
+    my $tmp1file = $f;    $tmp1file =~ s/\.(mod|mpg|mkv)$/_s1.mp4/i;
+    my $tmp2file = $f;    $tmp2file =~ s/\.(mod|mpg|mkv)$/.mp4/i;
 
     die "Could not generate temp1 name for $f" if ($tmp1file eq $f);
     die "Could not generate temp2 name for $f" if ($tmp2file eq $f);
@@ -1481,7 +1497,7 @@ sub transcode_canon_sd {
 	'-c:a aac -b:a 160k '.
 	"-metadata date=$createdate $tmp1file";
 
-    print "Converting $f\n";
+    print " ==> convert mpeg2, deinterlace\n";
     system ($cmd) == 0 or die "Problems in FFMPEG, halting";
 
 
@@ -1490,7 +1506,6 @@ sub transcode_canon_sd {
 	die "PROBLEMS WRITING metadata to $tmp2file, halting\n";
 
     unlink $tmp1file or warn "Could not remove TEMP file";
-    print " ==> $tmp2file\n";
 
     # done, rename the original
     rename $f, "$origdir/$f" or die "Could not rename original";
