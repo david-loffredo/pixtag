@@ -939,7 +939,7 @@ Options are:
  -force		 - Overwrite time-formatted files with sequence. 
  -forceusr <inits> - Like -usr but overwrite existing User IDs.
 
- -inc <num>	 - Use increment when renumbering.  Default is 10. 
+ -inc <num>	 - Use increment.  Default is 10 for seq, 100 for time. 
 
  -n		 - Print what would change but do not move.
  -o <file>       - Save the updated pixtag file as <file>.  By default 
@@ -987,9 +987,19 @@ PERL_EOF
 	/^-seq$/ && do { shift; $opts{base} = shift; $opts{as_time}=0; next; };
 	/^-time$/ && do { 
 	    shift; $opts{base} = shift; 
-	    die "time format must be HHMM\n" if not $opts{base} =~ /^\d+$/;
-	    $opts{base} = $opts{base} * 100; 
-	    $opts{as_time}=1; next; 
+	    if ($opts{base} =~ /^\d{4}$/) {
+		$opts{base} = $opts{base} * 100; 
+	    }
+	    elsif ($opts{base} =~ /^\d{2}$/) {
+		$opts{base} = $opts{base} * 10000; 
+	    }
+	    else {
+		die "time format must be HH or HHMM\n";
+	    }
+ 
+	    $opts{inc}=100; 
+	    $opts{as_time}=1; 
+	    next; 
 	};
 	/^-date$/ && do { 
 	    shift; $opts{date} = shift; 
@@ -1595,7 +1605,8 @@ sub transcode_canon_avi {
     my $cmd = "$ffmpeg -i $f ".
 	'-vf "scale=640:480:flags=lanczos,'.
 	'minterpolate=\'mi_mode=mci:mc_mode=aobmc:vsbmc=1\','.
-	'smartblur=1.5:-0.35:-3.5:0.65:0.25:2.0,vaguedenoiser" '.
+#	'smartblur=1.5:-0.35:-3.5:0.65:0.25:2.0,'.
+	'vaguedenoiser" '.
 	'-c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 '.
 	'-pix_fmt yuv420p -movflags +faststart '.
 	'-c:a aac -b:a 160k '.
