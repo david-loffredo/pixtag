@@ -1640,7 +1640,8 @@ sub transcode_sony_mpeg1 {
     # 104857 kb/s, 25 fps, 25 tbr, 90k tbn, 25 tbc
 
     # Do motion interpolation to 60fps, then denoise with
-    # vaguedenoiser.
+    # vaguedenoiser.  Turn off scene change detection in the motion
+    # interpolation because the camera only does single-scene clips.
     my ($f, $opts) = @_;
 
     print "$f\n";
@@ -1673,7 +1674,7 @@ sub transcode_sony_mpeg1 {
     SetVideoMake($et, $opts->{model});
 
     my $cmd = "$ffmpeg -i $f ".
-	'-vf "minterpolate=\'mi_mode=mci:mc_mode=aobmc:vsbmc=1\','.
+	'-vf "minterpolate=\'mi_mode=mci:mc_mode=aobmc:vsbmc=1:scd=none\','.
 	'vaguedenoiser" '.
 	'-c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 '.
 	'-pix_fmt yuv420p -movflags +faststart '.
