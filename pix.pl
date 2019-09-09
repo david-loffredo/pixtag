@@ -108,6 +108,12 @@ my %camdefs = (
 	Make => 'Sony',
 	Model => 'Sony DSC-S2100'
     },
+    'sony-dscw5' => {
+	desc => 'Erik and Emilys old Sony camera',
+	Make => 'Sony',
+	Model => 'Sony DSC-W5',
+	cvtfn => \&transcode_sony_mpeg1
+    },
     'sony-hi8' => {
 	desc => 'Sony 8mm camcorder (tapes)',
 	Make => 'Sony',
@@ -1625,6 +1631,67 @@ sub transcode_canon_avi {
     rename $f, "$origdir/$f" or die "Could not rename original";
 }
 
+
+
+
+sub transcode_sony_mpeg1 {
+    # Early Sony shoot VGA mpeg1 @ 25fps. 
+    # Video: mpeg1video, yuv420p(tv), 640x480 [SAR 1:1 DAR 4:3], 
+    # 104857 kb/s, 25 fps, 25 tbr, 90k tbn, 25 tbc
+
+    # Do motion interpolation to 60fps, then denoise with
+    # vaguedenoiser.
+    my ($f, $opts) = @_;
+
+    print "$f\n";
+    my $origdir = 'original_files';
+    my $tmp1file = $f;    $tmp1file =~ s/\.mpg$/_s1.mp4/i;
+    my $tmp2file = $f;    $tmp2file =~ s/\.mpg$/.mp4/i;
+
+    die "Could not generate temp1 name for $f" if ($tmp1file eq $f);
+    die "Could not generate temp2 name for $f" if ($tmp2file eq $f);
+    
+    if (-f $tmp1file) { unlink $tmp1file or die "Could not remove $tmp1file"; }
+    if (-f $tmp2file) { unlink $tmp2file or die "Could not remove $tmp2file"; }
+    
+    if (not -d $origdir) {
+	mkdir $origdir or die "Could not create backup dir";
+    }
+    
+    my $et_orig = new Image::ExifTool;
+    $et_orig->ExtractInfo($f);
+
+    # Do not stomp on all of the quicktime data that is in there.
+    my $et = new Image::ExifTool;
+    $et->SetNewValuesFromFile($f);
+
+    # Check the creation date and camera info.  This sets the exiftool
+    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
+
+    SetVideoDates($et, $createdate, $datesrc);
+    SetVideoMake($et, $opts->{make});
+    SetVideoMake($et, $opts->{model});
+
+    my $cmd = "$ffmpeg -i $f ".
+	'-vf "minterpolate=\'mi_mode=mci:mc_mode=aobmc:vsbmc=1\','.
+	'vaguedenoiser" '.
+	'-c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 '.
+	'-pix_fmt yuv420p -movflags +faststart '.
+	'-c:a aac -b:a 160k '.
+	"-metadata date=$createdate $tmp1file";
+
+    print " ==> convert mpeg1, motion interpolate\n";
+    system ($cmd) == 0 or die "Problems in FFMPEG, halting";
+
+    # Note that WriteInfo returns nonzero on success, zero on error
+    $et->WriteInfo($tmp1file, $tmp2file) == 0 and 
+	die "PROBLEMS WRITING metadata to $tmp2file, halting\n";
+
+    unlink $tmp1file or warn "Could not remove TEMP file";
+
+    # done, rename the original
+    rename $f, "$origdir/$f" or die "Could not rename original";
+}
 
 sub transcode_iphone_se {
     # iPhone SE video is H.264 video with aac audio in a .mov
