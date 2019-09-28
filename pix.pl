@@ -1231,6 +1231,7 @@ PERL_EOF
 
     while ($_[0]) {
         $_ = $_[0];
+        /^-?help$/  && do { print $usage; return 0; };
 
 	/^-cam$/ && do {
             shift; 
