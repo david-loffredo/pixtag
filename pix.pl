@@ -875,50 +875,66 @@ sub mv_filedir {
     my $usage = <<PERL_EOF;
 Usage: pix mvdir [options] <src ... > <dstdir>
 
-Renames a file and transfers the tag information to the new name.
+Moves files from the current directory to a different one and
+transfers the tag information to the new directory.
 
 Options are:
 
  -help           - print this help message.
- -o <file>       - Save the updated pixtag file as <file>.  By default 
-		   results are saved to the same file if there is only 
-		   one input or otherwise output goes to NEWTAGS.pixtag.
+ -o <file>       - Save the updated pixtag file as <file>.  A full path 
+		   to the file should be given.  By default results
+		   are saved to the same file if there is only one
+		   input or otherwise output goes to NEWTAGS.pixtag.
 
  -tags <file>	 - Read existing descriptions from <file>. By default 
 		   reads all .pixtag files in the directory.  This may
 		   be specified multiple times.
 PERL_EOF
 ;
+    my ($dstpt,$srcpt,$changed);
     while ($_[0]) {
         $_ = $_[0];
 
         /^-?help$/  && do { print $usage; return 0; };
+	/^-o$/ && do { shift; $dstpt = shift; next; };
+	/^-tags$/ && do { shift; $srcpt = shift; next; };
+
 	/^-/ && die "unknown option $_\n";
 	last;
     }
 
-    my ($src, $dst) = @_;
-    die "$src does not exist\n" if (not -e $src) or (not -f $src);
-    die "$dst directory does not exist\n" if (not -e $dst) or (not -d $dst);
-    die "no destination given\n" if not $dst;
+    my @files;
+    for my $arg (@_) { push @files, (sort glob $arg); }
 
-    $dst =~ s#\\#/#g;
-    
-    my ($srcpt) = <*.pixtag>;
-    my ($dstpt) = <$dst/*.pixtag>;
-    $dstpt = 'NEWTAGS.pixtag' if (not $dstpt);
+    my $dstdir = pop @files;
+    die "$dstdir directory does not exist\n" 
+	if (not -e $dstdir) or (not -d $dstdir);
+
+    $dstdir =~ s#\\#/#g;
+    ($srcpt) = <*.pixtag> if not defined $srcpt;
+    ($dstpt) = <$dstdir/*.pixtag> if not defined $dstpt;
+    $dstpt = "$dstdir/NEWTAGS.pixtag" if not defined $dstpt;
 
     my $srctags = PixTags->ReadXML($srcpt);
     my $dsttags = PixTags->ReadXML($dstpt);
 
-    my $p = $srctags-> DeletePhoto($src);
-    if ($p) { $dsttags-> PutPhoto($p); } 
+    foreach my $f (@files) {
+	if ((not -e $f) or (not -f $f)) {
+	    warn "$f not a file or does not exist\n";
+	    next;
+	}
 
-    die "$dst/$src exists" if -e "$dst/$src";
-    rename $src,"$dst/$src" or die "could not rename $src to $dst\n";
-    
-    $srctags->WriteXML($srcpt) if $p;
-    $dsttags->WriteXML($dstpt) if $p;
+	my $p = $srctags-> DeletePhoto($f);
+	if ($p) { $dsttags-> PutPhoto($p); } 
+
+	die "$dstdir/$f exists" if -e "$dstdir/$f";
+
+	print "$f --> $dstdir/$f\n";
+	rename $f,"$dstdir/$f" or die "could not move $f to $dstdir\n";
+	$changed = 1;
+    }    
+    $srctags->WriteXML($srcpt) if $changed;
+    $dsttags->WriteXML($dstpt) if $changed;
 }
 
 
@@ -1400,10 +1416,15 @@ PERL_EOF
 
 sub transcode_canon_elph110 {
     my ($f, $opts) = @_;
-    my $tmp1file = 'TEMP1.mp4';
-    my $tmp2file = 'TEMP2.mp4';
-    my $origdir = 'original_files';
 
+    print "$f\n";
+    my $origdir = 'original_files';
+    my $tmp1file = $f;    $tmp1file =~ s/\.(mov)$/_s1.mp4/i;
+    my $tmp2file = $f;    $tmp2file =~ s/\.(mov)$/.mp4/i;
+
+    die "Could not generate temp1 name for $f" if ($tmp1file eq $f);
+    die "Could not generate temp2 name for $f" if ($tmp2file eq $f);
+    
     if (-f $tmp1file) { unlink $tmp1file or die "Could not remove $tmp1file"; }
     if (-f $tmp2file) { unlink $tmp2file or die "Could not remove $tmp2file"; }
     
@@ -1411,40 +1432,19 @@ sub transcode_canon_elph110 {
 	mkdir $origdir or die "Could not create backup dir";
     }
 
-    print "$f\n";
-    
     my $et_orig = new Image::ExifTool;
     $et_orig->ExtractInfo($f);
 
-    my $et = new Image::ExifTool;
-    my $datesource;
-
     # Do not stomp on all of the quicktime data that is in there.
+    my $et = new Image::ExifTool;
     $et->SetNewValuesFromFile($f);
 
     # Check the creation date and camera info.  This sets the exiftool
     my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
-    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
 
-
-
-    
-    my ($createdate, $datesrc) = SetCreateDate($et, $et_orig, $f);
-    die "COULD NOT GET CREATE DATE" if not $createdate;
-
-    if ($opts->{rename}) {
-	## expect iso format 2017-02-19T16:55:55
-	my $val = $createdate;
-	$val =~ tr/T:-/_/d;  # make T underscore, strip colons, dash
-	$tmp2file = "${val}_$opts->{tag}.mp4";
-    }
-
-    my $tagcount = SetMakeModel($et, $et_orig, $opts, $f);
-
-    -f $tmp2file && do {
-	warn "FILE ALREADY EXISTS: $tmp2file, skipping\n";
-	return;
-    };
+    SetVideoDates($et, $createdate, $datesrc);
+    SetVideoMake($et, $opts->{make});
+    SetVideoModel($et, $opts->{model});
 
     # Use the same pixel format as the input data (+).  The canon
     # camera shoots with a pixel format of yuvj420p, which has full
@@ -1460,9 +1460,13 @@ sub transcode_canon_elph110 {
     # Compress with a CRF of 16 which is basically original quality.
     # Always convert the audio to AAC.  No need for -map_metadata 0
     # because we are adding the tags afterwards.
-    my $cmd = "$ffmpeg -i $f -c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 -pix_fmt $pixfmt -movflags +faststart -c:a aac -b:a 160k -metadata date=$createdate $tmp1file";
-    
-    print "Converting $f\n";
+    my $cmd = "$ffmpeg -i $f ".
+	'-c:v libx264 -preset veryslow -crf 16 -profile:v high -level 4.1 '.
+	"-pix_fmt $pixfmt -movflags +faststart ".
+	'-c:a aac -b:a 160k '.
+	"-metadata date=$createdate $tmp1file";
+
+    print " ==> convert audio, reencode\n";
     system ($cmd) == 0 or die "Problems in FFMPEG, halting";
 
     my $origsz = (-s $f);
@@ -1545,7 +1549,7 @@ sub transcode_canon_sd {
 
     SetVideoDates($et, $createdate, $datesrc);
     SetVideoMake($et, $opts->{make});
-    SetVideoMake($et, $opts->{model});
+    SetVideoModel($et, $opts->{model});
 
     my $cmd = "$ffmpeg -i $f ".
 	'-vf "bwdif,vaguedenoiser" '.
@@ -1606,7 +1610,7 @@ sub transcode_canon_avi {
 
     SetVideoDates($et, $createdate, $datesrc);
     SetVideoMake($et, $opts->{make});
-    SetVideoMake($et, $opts->{model});
+    SetVideoModel($et, $opts->{model});
 
     my $cmd = "$ffmpeg -i $f ".
 	'-vf "scale=640:480:flags=lanczos,'.
@@ -1671,7 +1675,7 @@ sub transcode_sony_mpeg1 {
 
     SetVideoDates($et, $createdate, $datesrc);
     SetVideoMake($et, $opts->{make});
-    SetVideoMake($et, $opts->{model});
+    SetVideoModel($et, $opts->{model});
 
     my $cmd = "$ffmpeg -i $f ".
 	'-vf "minterpolate=\'mi_mode=mci:mc_mode=aobmc:vsbmc=1:scd=none\','.
