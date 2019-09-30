@@ -201,7 +201,9 @@ my %camdefs = (
 		print $tagfile, ": duplicate photo $f\n" if $tags->GetPhoto($f);
 
 		my $p = $tags->MakePhoto(
-		    $f, desc=> $photo->findvalue('./desc')
+		    $f, 
+		    desc=> $photo->findvalue('./desc'),
+		    creator=> $photo->findvalue('./creator')
 		    );
 		
 		foreach my $event ($photo->findnodes('./event')) {
@@ -228,8 +230,8 @@ my %camdefs = (
 	    indent_string => "  ", 
 	    element => {
 		block    => [qw/pixscribe photo event/],
-		compact  => [qw/desc/],
-		preserves_whitespace => [qw/desc/],
+		compact  => [qw/desc creator/],
+		preserves_whitespace => [qw/desc creator/],
 	    }
 	    );
 
@@ -271,10 +273,18 @@ my %camdefs = (
 
 	    my $dnode = $doc->createElement("desc");
 	    $dnode-> appendTextNode($p->{desc});
+
+	    
 	    $pnode->setAttribute('file'=> $p->{file});
 	    $pnode->appendChild($dnode);
-	    $pp->pretty_print($pnode); # modified in-place
 
+	    if (defined $p->{creator} and $p->{creator} ne '' ) {
+		my $cn = $doc->createElement("creator");
+		$cn-> appendTextNode($p->{creator});
+		$pnode->appendChild($cn);
+	    }
+
+	    $pp->pretty_print($pnode); # modified in-place
 	    $root->appendTextNode("\n\n");
 
 	    if ($p->{status} eq 'missing') {

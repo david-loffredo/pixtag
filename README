@@ -235,7 +235,9 @@ a season:
 	"_fal"		sometime in fall
 	"_win"		sometime in winter
 
-
+2019-09-09 -- This is not close to ISO 8601, so it really does not
+work well.  ISO 8601 says to drop the date for months (1972-05 for May
+of 1972) but just using 00 for the date seems to be well tolerated.
 
 
 
@@ -307,3 +309,33 @@ Paper tissue roll core, photographed upright.
 exiftool -EXIF:ImageDescription="an EXIF CAT"  20150108_103805_dtl.jpg
 exiftool -XMP:Description="an XMP CAT"   also works  20150108_103805_dtl.jpg
 
+Time seems to have solved this issue.  XMP is now standardized as ISO
+16684 (ISO 16684-1:2012 and ISO 16684-2:2014) and defines embedding in
+jpg, gif, tiff, mp3, and mp4.
+
+The dublin core XMP tags are:
+Contributor 	string+ 	 
+Coverage 	string 	 
+Creator 	string+ 	 
+Date 	date+ 	 
+Description 	lang-alt 	 
+Format 	string 	 
+Identifier 	string 	 
+Language 	string+ 	 
+Publisher 	string+ 	 
+Relation 	string+ 	 
+Rights 	lang-alt 	 
+Source 	string/ 	 
+Subject 	string+ 	 
+Title 	lang-alt 	 
+Type 	string+
+
+The XMP exifEX  and iptcCore, iptcExt tags are also well supported
+
+iptcExt Event
+
+ShownEventIdentifier / ShownEventName
+
+
+Nice writeup of the tags
+http://u88.n24.queensu.ca/~bogdan/articles/where_what.html
