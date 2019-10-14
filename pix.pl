@@ -43,6 +43,8 @@ information, like \"pix tagmake -help\"
  cvt		Convert video to normal form
  setdate	Set the date tags in JPG or MP4 video
 
+ status		Scan directories and report tagging coverage.
+
 STILL UNDER DEVELOPMENT
  rotate		Automatically rotate and strip orientation tags (needs jhead)
 PERL_EOF
@@ -135,6 +137,7 @@ my %camdefs = (
 {
     package PixTags;
 
+    $PixTags::verbose = 1;
     sub new { bless { photos=> {}, events=> {} }, $_[0] }
     sub GetPhoto { return $_[0]->{photos}->{lc $_[1]}; }
     sub GetEvent { return $_[0]->{events}->{lc $_[1]}; }
@@ -194,7 +197,7 @@ my %camdefs = (
 	    # old files used a different element
 	    ($root) = $doc->findnodes('/pixtag') if not $root;
 
-	    print $_, ": reading tags file\n"; 
+	    print $_, ": reading tags file\n" if $PixTags::verbose; 
 	    foreach my $photo ($root->findnodes('./photo')) 
 	    {
 		my $f = $photo->findvalue('./@file');
@@ -296,7 +299,7 @@ my %camdefs = (
 	}
 
 	$root->appendTextNode("\n");
-	print $filename, ": saving updated file\n";
+	print $filename, ": saving updated file\n" if $PixTags::verbose; 
 
 	if (defined $filename) {
 	    $doc->toFile($filename);
@@ -824,6 +827,108 @@ PERL_EOF
     
     $tags->WriteXML($dstpt) if $change;
 }
+
+
+
+
+#============================================================
+# TAG STATUS ================================================
+#============================================================
+
+sub tagstatus {
+    my $usage = <<PERL_EOF;
+Usage: pix tagstatus [options] [<dir>]
+
+Scan directories recursively and print tag file coverage.
+
+Options are:
+
+ -help           - print this help message.
+ -v              - print names of files with blank descriptions
+PERL_EOF
+;
+
+    my %opts = ( verbose=> 0 );
+    while ($_[0]) {
+        $_ = $_[0];
+
+        /^-?help$/  && do { print $usage; return 0; };
+        /^-v(erbose)?$/  && do { shift; $opts{verbose} = 1; next; };
+	/^-/ && die "unknown option $_\n";
+	last;
+    }
+    @_ = ('.') if not scalar(@_);
+    find(sub { scanstatus(\%opts); }, @_);
+}
+
+sub scanstatus {
+    my ($opts) = @_;
+
+    # only look at directories
+    return if not -d;
+
+    # prune source control directories
+    if (/^.git$|^CVS$|^RCS$|^SCCS$/) {
+	$File::Find::prune = 1;
+	return;
+    }
+
+    print_status($opts, $_, $File::Find::name);
+}
+
+sub print_status {
+    my ($opts, $dir, $fullname) = @_;
+    my @srctags = <$dir/*.pixtag>;
+    my @srcfiles;
+    my @blankfiles;
+
+    # get all media files in directory
+    opendir(D, $dir) || die "Can't open directory: $!\n";
+    while (my $f = readdir(D)) {
+	next if not -f "$dir/$f";
+	next if not IsMediaFile($f);
+	push @srcfiles, $f;
+    }
+    closedir(D);
+
+    if (not scalar(@srcfiles)) {
+	# no pictures, warn only if there is a pixtag file
+	print "$fullname: PIXTAG FILE WITH NO MEDIA\n" if scalar(@srctags);
+	return;
+    }
+
+    $PixTags::verbose = 0; 
+    my $nummiss;
+    my $tags = PixTags->ReadXML(@srctags);
+    $PixTags::verbose = 1; 
+
+    foreach my $f (@srcfiles) {
+	my $p = $tags->GetPhoto($f);
+	do { $nummiss++; next; } unless $p;
+	push @blankfiles, $f 
+	    if (not defined $p->{desc}) || $p->{desc} =~ /^\s*$/;
+    }
+
+    my $numblank = scalar (@blankfiles);
+
+    if (not scalar(@srctags)) {
+	print "$fullname: NO TAGS FILE, $nummiss pics\n";
+	return;
+    }
+    
+    my @msg;
+    push @msg, "$numblank BLANK" unless not $numblank;
+    push @msg, "$nummiss MISSING" unless not $nummiss;
+    push @msg, "OK" unless scalar (@msg);
+    print "$fullname: ", join(', ', @msg), "\n";
+    if ($opts->{verbose} and $numblank > 0) {
+	print "  blanks:\n";
+	foreach my $f (@blankfiles) {
+	    print "\t$f\n";
+	}
+    }
+}
+
 
 
 #============================================================
@@ -1823,6 +1928,8 @@ sub main {
 
 	/^setdate$/  && do { shift; return setdate_tags(@_); };
 	/^cvt$/  && do { shift; return convert_video(@_); };
+
+	/^status$/  && do { shift; return tagstatus(@_); };
 
 	print "unknown option $_\n";
 	return 1;
