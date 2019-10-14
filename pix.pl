@@ -898,26 +898,35 @@ sub print_status {
     }
 
     $PixTags::verbose = 0; 
-    my $nummiss;
+    my ($numnew, $nummiss);
     my $tags = PixTags->ReadXML(@srctags);
     $PixTags::verbose = 1; 
 
+    # look for new and blank
     foreach my $f (@srcfiles) {
 	my $p = $tags->GetPhoto($f);
-	do { $nummiss++; next; } unless $p;
+	do { $numnew++; next; } unless $p;
 	push @blankfiles, $f 
 	    if (not defined $p->{desc}) || $p->{desc} =~ /^\s*$/;
+
+	$p->{status} = 'ok';
+    }
+
+    # count up the missing files
+    foreach my $f (keys %{$tags->{photos}}) {
+	my $p = $tags->{photos}->{$f};
+	$nummiss++ if not $p->{status};
     }
 
     my $numblank = scalar (@blankfiles);
-
     if (not scalar(@srctags)) {
-	print "$fullname: NO TAGS FILE, $nummiss pics\n";
+	print "$fullname: NO TAGS FILE, $numnew pics\n";
 	return;
     }
     
     my @msg;
     push @msg, "$numblank BLANK" unless not $numblank;
+    push @msg, "$numnew NEW" unless not $numnew;
     push @msg, "$nummiss MISSING" unless not $nummiss;
     push @msg, "OK" unless scalar (@msg);
     print "$fullname: ", join(', ', @msg), "\n";
