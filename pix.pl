@@ -845,6 +845,7 @@ Options are:
 
  -help           - print this help message.
  -v              - print names of files with blank descriptions
+ -s              - print total across directories
 PERL_EOF
 ;
 
@@ -854,11 +855,23 @@ PERL_EOF
 
         /^-?help$/  && do { print $usage; return 0; };
         /^-v(erbose)?$/  && do { shift; $opts{verbose} = 1; next; };
+        /^-s$/  && do { shift; $opts{sum} = 1; next; };
 	/^-/ && die "unknown option $_\n";
 	last;
     }
     @_ = ('.') if not scalar(@_);
     find(sub { scanstatus(\%opts); }, @_);
+
+    if ($opts{sum}) {
+	print "TOTALS:\n";
+	print "  NEW:   $opts{totnew}\n" if $opts{totnew};
+	print "  BLANK: $opts{totblank}\n" if $opts{totblank};
+	print "  MISSING: $opts{totmiss}\n" if $opts{totmiss};
+	print "  SKIPPED: $opts{totskip}\n" if $opts{totskip};
+
+	print "  ALL OK\n" unless ($opts{totnew} or $opts{totblank} or
+				   $opts{totmiss} or $opts{totskip});
+    }
 }
 
 sub scanstatus {
@@ -921,6 +934,7 @@ sub print_status {
     my $numblank = scalar (@blankfiles);
     if (not scalar(@srctags)) {
 	print "$fullname: NO TAGS FILE, $numnew pics\n";
+	$opts->{totskip} += $numnew  if $opts->{sum};
 	return;
     }
     
@@ -935,6 +949,12 @@ sub print_status {
 	foreach my $f (@blankfiles) {
 	    print "\t$f\n";
 	}
+    }
+
+    if ($opts->{sum}) {
+	$opts->{totblank} += $numblank;
+	$opts->{totnew} += $numnew;
+	$opts->{totmiss} += $nummiss;
     }
 }
 
