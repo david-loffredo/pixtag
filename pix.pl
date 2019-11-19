@@ -1454,7 +1454,7 @@ sub setdate_mp4 {
 
     SetVideoDates($et, $createdate, $datesrc);
     SetVideoMake($et, $opts->{make});
-    SetVideoMake($et, $opts->{model});
+    SetVideoModel($et, $opts->{model});
 
     # Make new MP4 container with ContentCreateDate
     my $cmd = "$ffmpeg -i $f  -c:v copy -c:a copy -movflags +faststart -metadata date=$createdate $tmp1file";
