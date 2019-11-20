@@ -31,7 +31,9 @@ information, like \"pix tagmake -help\"
  help		Print this usage message
 
  tagcat		Combine photo description files
- tagevent	Add an event to the description for photo
+ tagevent	Add an event to the description of a photo/video
+ tagcreator	Add a creator to the description of a photo/video
+ tagusr		Alias for "tagcreator"
  taginfo	Find and print photo description 
  tagmake	Update pixtag file with files in directory.
 
@@ -723,10 +725,6 @@ Options are:
 
  -help		- print this help message.
 
- -o <file>      - Save the updated pixtag file as <file>.  By default 
-		  results are saved to the same file if there is only 
-		  one input or otherwise output goes to NEWTAGS.pixtag.
-
  -tags <file>	- Search descriptions in <file>. By default, this 
 		  searches all .pixtag files in the directory.  This
 		  may be specified multiple times.
@@ -777,6 +775,10 @@ Options are:
 
  -help		- print this help message.
 
+ -o <file>	- Save the updated pixtag file as <file>.  By default 
+		  results are saved to the same file if there is only 
+		  one input or otherwise output goes to NEWTAGS.pixtag.
+
  -tags <file>	- Search descriptions in <file>. By default, this 
 		  searches all .pixtag files in the directory.  This
 		  may be specified multiple times.
@@ -805,7 +807,7 @@ PERL_EOF
     @srctags = <*.pixtag> if (not scalar @srctags);
     $dstpt = $srctags[0] if (not $dstpt) and (scalar @srctags) == 1;
     $dstpt = 'NEWTAGS.pixtag' if (not $dstpt);
-
+    
     my $tags = PixTags->ReadXML(@srctags);
     
     ## Add the event if not already there
@@ -827,6 +829,72 @@ PERL_EOF
     
     $tags->WriteXML($dstpt) if $change;
 }
+
+
+
+
+#============================================================
+# TAG CREATOR  ================================================
+#============================================================
+
+sub tagcreator {
+    my $usage = <<PERL_EOF;
+Usage: pix tagcreator [options] <creator> <media-files> ...
+
+Add an creator tag to the descriptions of media files.  
+Options are:
+
+ -help		- print this help message.
+
+ -o <file>	- Save the updated pixtag file as <file>.  By default 
+		  results are saved to the same file if there is only 
+		  one input or otherwise output goes to NEWTAGS.pixtag.
+
+ -tags <file>	- Search descriptions in <file>. By default, this 
+		  searches all .pixtag files in the directory.  This
+		  may be specified multiple times.
+PERL_EOF
+;
+    my ($dstpt);
+    my @srctags;
+    
+    while ($_[0]) {
+        $_ = $_[0];
+
+        /^-?help$/  && do { print $usage; return 0; };
+	/^-tags$/ && do { shift; push @srctags, shift; next; };
+	/^-o$/ && do { shift; $dstpt = shift; next; };
+	/^-/ && die "unknown option $_\n";
+	last;
+    }
+    my $change;
+    my $creator = shift;
+    die "must specify a creator" if not $creator;
+
+    my @files;
+    for my $arg (@_) { push @files, (sort glob $arg); }
+
+    # read any existing tags files
+    @srctags = <*.pixtag> if (not scalar @srctags);
+    $dstpt = $srctags[0] if (not $dstpt) and (scalar @srctags) == 1;
+    $dstpt = 'NEWTAGS.pixtag' if (not $dstpt);
+
+    my $tags = PixTags->ReadXML(@srctags);
+    
+    foreach my $f (@files) {
+	next if not -f $f;
+	next if not IsMediaFile($f);
+	    
+	my $p = $tags->GetPhoto($f);
+	$p = $tags->MakePhoto($f, desc=>' ') unless $p;
+	$p-> {creator} = $creator;
+	$change++;
+    }
+    
+    $tags->WriteXML($dstpt) if $change;
+}
+
+
 
 
 
@@ -1496,6 +1564,7 @@ sub setdate_jpg {
 
 
 
+
 #============================================================
 # CONVERT VIDEO FORMATS
 #============================================================
@@ -1947,6 +2016,7 @@ sub main {
         /^-?help$/  && do { return usage(); };
 	/^tagcat$/  && do { shift; return tagcat(@_); };
 	/^tagevent$/  && do { shift; return tagevent(@_); };
+	/^(tagcreator|tagusr)$/  && do { shift; return tagcreator(@_); };
 	/^taginfo$/  && do { shift; return taginfo(@_); };
 	/^(tagmake|maketag)$/ && do { shift; return tagmake(@_); };
 
