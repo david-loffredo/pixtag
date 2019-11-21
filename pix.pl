@@ -46,6 +46,7 @@ information, like \"pix tagmake -help\"
  setdate	Set the date tags in JPG or MP4 video
 
  status		Scan directories and report tagging coverage.
+ findusrs	List usr suffixes of the files in a directory.
 
 STILL UNDER DEVELOPMENT
  rotate		Automatically rotate and strip orientation tags (needs jhead)
@@ -887,8 +888,11 @@ PERL_EOF
 	    
 	my $p = $tags->GetPhoto($f);
 	$p = $tags->MakePhoto($f, desc=>' ') unless $p;
-	$p-> {creator} = $creator;
-	$change++;
+	if ($p-> {creator} ne $creator) {
+	    print "$p->{file}: creator: $creator\n";
+	    $p-> {creator} = $creator;
+	    $change++;
+	}
     }
     
     $tags->WriteXML($dstpt) if $change;
@@ -2004,6 +2008,48 @@ sub transcode_iphone_se {
 
 
 #============================================================
+# FIND USERS ================================================
+#============================================================
+sub findusrs {
+    my $usage = <<PERL_EOF;
+Usage: pix findusrs [options] [<dir>]
+
+List the set of unique suffixes used by the files in a directory.
+Only looks at files of the form  date_time_usr.
+
+Options are:
+
+ -help           - print this help message.
+PERL_EOF
+;
+    my %usrs;
+    while ($_[0]) {
+        $_ = $_[0];
+
+        /^-?help$/  && do { print $usage; return 0; };
+	/^-/ && die "unknown option $_\n";
+	last;
+    }
+   
+    ## Scan the directories and create entries if needed
+    push @_, '.' if not $_[0];
+    foreach my $dir (@_) {
+	opendir(D, ".") || die "Can't open directory: $!\n";
+	while (my $f = readdir(D)) {
+	    next if not -f $f;
+
+	    my ($foo, $usr) = $f =~ /(\d{8}_\d{6})_(\w+)\./;
+	    next if not defined $usr;
+	    $usrs{$usr}++;
+	}
+	closedir(D);
+    }
+
+    print "Suffixes: ", (join ', ', sort keys %usrs), "\n";
+}
+
+
+#============================================================
 # MAIN ======================================================
 #============================================================
 
@@ -2029,6 +2075,7 @@ sub main {
 	/^cvt$/  && do { shift; return convert_video(@_); };
 
 	/^status$/  && do { shift; return tagstatus(@_); };
+	/^findusrs$/  && do { shift; return findusrs(@_); };
 
 	print "unknown option $_\n";
 	return 1;
