@@ -935,14 +935,18 @@ PERL_EOF
     find(sub { scanstatus(\%opts); }, @_);
 
     if ($opts{sum}) {
+	my $all = ($opts{totok} + $opts{totnew} + 
+		   $opts{totblank} + $opts{totmiss});
+
 	print "TOTALS:\n";
+	print "  GOOD:  $opts{totok} (", 
+	    int (($opts{totok} / $all) * 100), 
+	    "%)\n" if $all > 0;
+
 	print "  NEW:   $opts{totnew}\n" if $opts{totnew};
 	print "  BLANK: $opts{totblank}\n" if $opts{totblank};
 	print "  MISSING: $opts{totmiss}\n" if $opts{totmiss};
 	print "  SKIPPED: $opts{totskip}\n" if $opts{totskip};
-
-	print "  ALL OK\n" unless ($opts{totnew} or $opts{totblank} or
-				   $opts{totmiss} or $opts{totskip});
     }
 }
 
@@ -983,7 +987,7 @@ sub print_status {
     }
 
     $PixTags::verbose = 0; 
-    my ($numnew, $nummiss);
+    my ($numnew, $nummiss, $numok);
     my $tags = PixTags->ReadXML(@srctags);
     $PixTags::verbose = 1; 
 
@@ -991,8 +995,11 @@ sub print_status {
     foreach my $f (@srcfiles) {
 	my $p = $tags->GetPhoto($f);
 	do { $numnew++; next; } unless $p;
-	push @blankfiles, $f 
-	    if (not defined $p->{desc}) || $p->{desc} =~ /^\s*$/;
+	if ((not defined $p->{desc}) || $p->{desc} =~ /^\s*$/) {
+	    push @blankfiles, $f;
+	} else {
+	    $numok++;
+	}
 
 	$p->{status} = 'ok';
     }
@@ -1027,6 +1034,7 @@ sub print_status {
 	$opts->{totblank} += $numblank;
 	$opts->{totnew} += $numnew;
 	$opts->{totmiss} += $nummiss;
+	$opts->{totok} += $numok;
     }
 }
 
