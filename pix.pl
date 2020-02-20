@@ -1,9 +1,20 @@
 #!/usr/local/bin/perl
 # 
-# PixScribe Photo Annotation Tools
-# Copyright (c) 2003-2019 by David Loffredo (dave@dave.org)
-# All Rights Reserved
-#
+# PixTag Photo Annotation Tools
+# Copyright (c) 2003-2020 by David Loffredo (dave@dave.org)
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# 
 
 # ffmpeg uses mp4 v1 containers, to use the newer one do -brand mp42
 
@@ -14,7 +25,7 @@ use XML::LibXML;
 use XML::LibXML::PrettyPrint;
 use strict;
 
-my $pkg_version = "0.2";
+my $pkg_version = "0.3";
 my $ffmpeg = "ffmpeg -hide_banner -loglevel warning";
 
 sub usage {
@@ -195,10 +206,11 @@ my %camdefs = (
 	foreach (@_) {
 	    my $tagfile = $_;
 	    my $doc = XML::LibXML->load_xml(location => $_);
-	    my ($root) = $doc->findnodes('/pixscribe');
+	    my ($root) = $doc->findnodes('/pixtag');
 
-	    # old files used a different element
-	    ($root) = $doc->findnodes('/pixtag') if not $root;
+	    # long story, originally used pixtag, then pixscribe, now
+	    # back to pixtag again.
+	    ($root) = $doc->findnodes('/pixscribe') if not $root;
 
 	    print $_, ": reading tags file\n" if $PixTags::verbose; 
 	    foreach my $photo ($root->findnodes('./photo')) 
@@ -235,7 +247,7 @@ my %camdefs = (
 	my $pp = XML::LibXML::PrettyPrint->new(
 	    indent_string => "  ", 
 	    element => {
-		block    => [qw/pixscribe photo event/],
+		block    => [qw/pixtag photo event/],
 		compact  => [qw/desc creator/],
 		preserves_whitespace => [qw/desc creator/],
 	    }
@@ -248,7 +260,7 @@ my %camdefs = (
 	## Write each element formatted but separate by blank lines to
 	## make it easier to edit by hand.
 	## 
-	my $root = $doc->createElement("pixscribe");
+	my $root = $doc->createElement("pixtag");
 	$doc->setDocumentElement($root);
 
 	foreach my $id (sort keys %{$tags->{events}}) {

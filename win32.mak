@@ -1,7 +1,5 @@
 # 
-# PixScribe Photo Annotation Tools
-# Copyright (c) 2003-2019 by David Loffredo (dave@dave.org)
-# All Rights Reserved
+# PixTag Photo Annotation Tools
 #
 
 !include win32.cfg
