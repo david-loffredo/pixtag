@@ -340,3 +340,13 @@ ShownEventIdentifier / ShownEventName
 
 Nice writeup of the tags
 http://u88.n24.queensu.ca/~bogdan/articles/where_what.html
+
+
+
+Use "jhead -autorot" to transform the image to the final orientation
+and clear the flags so that it stays that way.  Avoids problems when
+moving back and forth between older software that may not understand
+the orientation tags.
+
+Deleting embedded thumbnails "jhead -dt" may also help if these things
+get corrupted

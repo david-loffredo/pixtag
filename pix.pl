@@ -1369,6 +1369,8 @@ Options are:
 
  -usr <inits>	 - Trailing User ID for new filenames.   Default 'dtl'.
 		   Will preserve existing IDs on files.
+
+ -forceusr <inits> - Set user on existing files as well as new ones.
 PERL_EOF
 ;
     my %opts = ( usr=>'dtl', dryrun=>0 );
