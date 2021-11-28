@@ -104,6 +104,12 @@ my %camdefs = (
 	Model => 'iPhone SE',
 	cvtfn => \&transcode_iphone_se
     },
+    'iphone-4' => {
+	desc => 'Kate iPhone (.mov)',
+	Make => 'Apple',
+	Model => 'iPhone 4S',
+	cvtfn => \&transcode_iphone_se
+    },
     'kodak-c743' => {
 	desc => 'Dads Kodak Camera',
 	Make => 'Eastman Kodak Company',
@@ -225,7 +231,7 @@ my %camdefs = (
 		    );
 		
 		foreach my $event ($photo->findnodes('./event')) {
-		    push $p->{events}, $event->findvalue('./@ref');
+		    push @{$p->{events}}, $event->findvalue('./@ref');
 		}
 	    }
 
